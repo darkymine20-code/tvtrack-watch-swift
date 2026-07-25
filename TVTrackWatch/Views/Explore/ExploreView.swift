@@ -18,6 +18,23 @@ public struct ExploreView: View {
     @State private var traktPlayed: [TMDbMediaItem] = []
     @State private var recommendedItems: [TMDbMediaItem] = []
     
+    // Categorized Collections for Movies vs TV Shows
+    @State private var moviesTrending: [TMDbMediaItem] = []
+    @State private var tvTrending: [TMDbMediaItem] = []
+    @State private var moviesFavorited: [TMDbMediaItem] = []
+    @State private var tvFavorited: [TMDbMediaItem] = []
+    @State private var moviesWatched: [TMDbMediaItem] = []
+    @State private var tvWatched: [TMDbMediaItem] = []
+    @State private var moviesPlayed: [TMDbMediaItem] = []
+    @State private var tvPlayed: [TMDbMediaItem] = []
+    
+    // Interactive Media Type Selectors
+    @State private var globalMediaType = "all"
+    @State private var trendingMediaType = "all"
+    @State private var favoritedMediaType = "all"
+    @State private var watchedMediaType = "all"
+    @State private var playedMediaType = "all"
+    
     @State private var isFilterSheetPresented = false
     @State private var selectedGenreId: Int?
     @State private var selectedYear = ""
@@ -26,46 +43,72 @@ public struct ExploreView: View {
     
     public init() {}
     
+    private func getSectionItems(
+        sectionType: String,
+        mixed: [TMDbMediaItem],
+        movies: [TMDbMediaItem],
+        tv: [TMDbMediaItem]
+    ) -> [TMDbMediaItem] {
+        let active = sectionType != "all" ? sectionType : globalMediaType
+        switch active {
+        case "movie": return movies.isEmpty ? mixed.filter { $0.mediaType == "movie" } : movies
+        case "tv": return tv.isEmpty ? mixed.filter { $0.mediaType == "tv" } : tv
+        default: return mixed
+        }
+    }
+    
     public var body: some View {
         VStack(spacing: 0) {
             // Search & Filter Header Bar
-            HStack(spacing: 12) {
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.cyan)
-                    TextField("Search movies, TV shows, actors...", text: $searchQuery)
-                        .onChange(of: searchQuery) {
-                            currentPage = 1
-                            performSearch(query: searchQuery, page: 1)
+            VStack(spacing: 10) {
+                HStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.cyan)
+                        TextField("Search movies, TV shows, actors...", text: $searchQuery)
+                            .onChange(of: searchQuery) {
+                                currentPage = 1
+                                performSearch(query: searchQuery, page: 1)
+                            }
+                        if !searchQuery.isEmpty {
+                            Button(action: {
+                                searchQuery = ""
+                                searchResults = []
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.gray)
+                            }
                         }
-                    if !searchQuery.isEmpty {
-                        Button(action: {
-                            searchQuery = ""
-                            searchResults = []
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.gray)
+                    }
+                    .padding(12)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(14)
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.15), lineWidth: 1))
+                    
+                    Button(action: { isFilterSheetPresented = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                            Text("Filters")
                         }
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
+                        .foregroundColor(.white)
+                        .cornerRadius(14)
+                        .shadow(color: .blue.opacity(0.4), radius: 6)
                     }
                 }
-                .padding(12)
-                .background(Color.white.opacity(0.08))
-                .cornerRadius(14)
-                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.15), lineWidth: 1))
                 
-                Button(action: { isFilterSheetPresented = true }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                        Text("Filters")
+                // Global Explore Catalog Media Filter Bar
+                if searchQuery.isEmpty {
+                    Picker("Global Catalog Filter", selection: $globalMediaType) {
+                        Text("✨ All Catalog").tag("all")
+                        Text("🎬 Movies Only").tag("movie")
+                        Text("📺 TV Shows Only").tag("tv")
                     }
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
-                    .foregroundColor(.white)
-                    .cornerRadius(14)
-                    .shadow(color: .blue.opacity(0.4), radius: 6)
+                    .pickerStyle(SegmentedPickerStyle())
                 }
             }
             .padding()
@@ -109,7 +152,7 @@ public struct ExploreView: View {
                     }
                     .padding(.top)
                 } else {
-                    // Trakt API Collections
+                    // Trakt API Collections with Movies / TV Shows Selection
                     VStack(alignment: .leading, spacing: 32) {
                         // Recommended For You
                         VStack(alignment: .leading, spacing: 12) {
@@ -122,7 +165,8 @@ public struct ExploreView: View {
                             }
                             .padding(.horizontal)
                             
-                            MediaCarouselHorizontal(items: recommendedItems)
+                            let filteredRecs = globalMediaType == "all" ? recommendedItems : recommendedItems.filter { $0.mediaType == globalMediaType }
+                            MediaCarouselHorizontal(items: filteredRecs)
                         }
                         
                         // 🔥 Trakt Trending
@@ -133,10 +177,19 @@ public struct ExploreView: View {
                                 Text("Trakt Trending")
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
+                                
+                                Picker("Trending Filter", selection: $trendingMediaType) {
+                                    Text("All").tag("all")
+                                    Text("Movies").tag("movie")
+                                    Text("TV Shows").tag("tv")
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 210)
                             }
                             .padding(.horizontal)
                             
-                            MediaCarouselHorizontal(items: traktTrending)
+                            let items = getSectionItems(sectionType: trendingMediaType, mixed: traktTrending, movies: moviesTrending, tv: tvTrending)
+                            MediaCarouselHorizontal(items: items)
                         }
                         
                         // ❤️ Trakt Most Favorited
@@ -147,10 +200,19 @@ public struct ExploreView: View {
                                 Text("Trakt Most Favorited")
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
+                                
+                                Picker("Favorited Filter", selection: $favoritedMediaType) {
+                                    Text("All").tag("all")
+                                    Text("Movies").tag("movie")
+                                    Text("TV Shows").tag("tv")
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 210)
                             }
                             .padding(.horizontal)
                             
-                            MediaCarouselHorizontal(items: traktFavorited)
+                            let items = getSectionItems(sectionType: favoritedMediaType, mixed: traktFavorited, movies: moviesFavorited, tv: tvFavorited)
+                            MediaCarouselHorizontal(items: items)
                         }
                         
                         // 👁️ Trakt Most Watched
@@ -161,10 +223,19 @@ public struct ExploreView: View {
                                 Text("Trakt Most Watched")
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
+                                
+                                Picker("Watched Filter", selection: $watchedMediaType) {
+                                    Text("All").tag("all")
+                                    Text("Movies").tag("movie")
+                                    Text("TV Shows").tag("tv")
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 210)
                             }
                             .padding(.horizontal)
                             
-                            MediaCarouselHorizontal(items: traktWatched)
+                            let items = getSectionItems(sectionType: watchedMediaType, mixed: traktWatched, movies: moviesWatched, tv: tvWatched)
+                            MediaCarouselHorizontal(items: items)
                         }
                         
                         // 🎮 Trakt Most Played
@@ -175,10 +246,19 @@ public struct ExploreView: View {
                                 Text("Trakt Most Played")
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
+                                
+                                Picker("Played Filter", selection: $playedMediaType) {
+                                    Text("All").tag("all")
+                                    Text("Movies").tag("movie")
+                                    Text("TV Shows").tag("tv")
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .frame(width: 210)
                             }
                             .padding(.horizontal)
                             
-                            MediaCarouselHorizontal(items: traktPlayed)
+                            let items = getSectionItems(sectionType: playedMediaType, mixed: traktPlayed, movies: moviesPlayed, tv: tvPlayed)
+                            MediaCarouselHorizontal(items: items)
                         }
                     }
                     .padding(.vertical)
@@ -255,10 +335,22 @@ public struct ExploreView: View {
             do {
                 let trendingMovies = try await tmdbService.fetchTrendingMovies()
                 let trendingTV = try await tmdbService.fetchTrendingTVShows()
+                
+                self.moviesTrending = trendingMovies
+                self.tvTrending = trendingTV
                 self.traktTrending = trendingMovies + trendingTV
+                
+                self.moviesFavorited = Array(trendingMovies.prefix(12))
+                self.tvFavorited = Array(trendingTV.prefix(12))
                 self.traktFavorited = Array(trendingMovies.prefix(8) + trendingTV.suffix(8))
+                
+                self.moviesWatched = Array(trendingMovies.reversed().prefix(12))
+                self.tvWatched = Array(trendingTV.reversed().prefix(12))
                 self.traktWatched = Array(trendingTV.prefix(8) + trendingMovies.suffix(8))
-                self.traktPlayed = Array((trendingMovies + trendingTV).shuffled().prefix(10))
+                
+                self.moviesPlayed = Array(trendingMovies.shuffled().prefix(12))
+                self.tvPlayed = Array(trendingTV.shuffled().prefix(12))
+                self.traktPlayed = Array((trendingMovies + trendingTV).shuffled().prefix(12))
                 
                 let history = Array(dataManager.items.values)
                 self.recommendedItems = RecommendationEngine.shared.generateRecommendations(userHistory: history, trendingItems: trendingMovies + trendingTV)
