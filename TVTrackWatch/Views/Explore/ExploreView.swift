@@ -36,6 +36,7 @@ public struct ExploreView: View {
     @State private var playedMediaType = "all"
     
     @State private var isFilterSheetPresented = false
+    @State private var isFilterActive = false
     @State private var selectedGenreId: Int?
     @State private var selectedYear = ""
     @State private var minRating = 0.0
@@ -74,6 +75,8 @@ public struct ExploreView: View {
                             Button(action: {
                                 searchQuery = ""
                                 searchResults = []
+                                isFilterActive = false
+                                currentPage = 1
                             }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.gray)
@@ -281,7 +284,11 @@ public struct ExploreView: View {
     private func performSearch(query: String, page: Int) {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             searchResults = []
+            isFilterActive = false
             return
+        }
+        if query != "Filtered Catalog" {
+            isFilterActive = false
         }
         Task {
             do {
@@ -301,11 +308,24 @@ public struct ExploreView: View {
     private func loadNextSearchPage() {
         guard currentPage < totalPages && !isSearchingMore else { return }
         isSearchingMore = true
-        currentPage += 1
+        let nextPage = currentPage + 1
         Task {
             do {
-                let res = try await tmdbService.searchMediaPaginated(query: searchQuery, page: currentPage)
-                self.searchResults.append(contentsOf: res.items)
+                if isFilterActive {
+                    let res = try await tmdbService.fetchFilteredMediaPaginated(
+                        mediaType: filterMediaType,
+                        genreId: selectedGenreId,
+                        year: selectedYear,
+                        minRating: minRating > 0 ? minRating : nil,
+                        page: nextPage
+                    )
+                    self.searchResults.append(contentsOf: res.items)
+                    self.currentPage = nextPage
+                } else {
+                    let res = try await tmdbService.searchMediaPaginated(query: searchQuery, page: nextPage)
+                    self.searchResults.append(contentsOf: res.items)
+                    self.currentPage = nextPage
+                }
                 self.isSearchingMore = false
             } catch {
                 self.isSearchingMore = false
@@ -316,13 +336,17 @@ public struct ExploreView: View {
     private func applyFilters() {
         Task {
             do {
-                let filtered = try await tmdbService.fetchFilteredMedia(
+                self.isFilterActive = true
+                self.currentPage = 1
+                let res = try await tmdbService.fetchFilteredMediaPaginated(
                     mediaType: filterMediaType,
                     genreId: selectedGenreId,
                     year: selectedYear,
-                    minRating: minRating > 0 ? minRating : nil
+                    minRating: minRating > 0 ? minRating : nil,
+                    page: 1
                 )
-                self.searchResults = filtered
+                self.searchResults = res.items
+                self.totalPages = res.totalPages
                 self.searchQuery = "Filtered Catalog"
             } catch {
                 print("Filter error: \(error)")

@@ -50,8 +50,8 @@ public final class TMDbService: ObservableObject {
         return items
     }
     
-    public func fetchFilteredMedia(mediaType: String, genreId: Int?, year: String?, minRating: Double?) async throws -> [TMDbMediaItem] {
-        var urlString = "\(AppConfig.tmdbBaseURL)/discover/\(mediaType)?api_key=\(apiKey)&sort_by=popularity.desc"
+    public func fetchFilteredMediaPaginated(mediaType: String, genreId: Int?, year: String?, minRating: Double?, page: Int = 1) async throws -> (items: [TMDbMediaItem], totalPages: Int) {
+        var urlString = "\(AppConfig.tmdbBaseURL)/discover/\(mediaType)?api_key=\(apiKey)&sort_by=popularity.desc&page=\(page)"
         if let genreId = genreId {
             urlString += "&with_genres=\(genreId)"
         }
@@ -65,7 +65,31 @@ public final class TMDbService: ObservableObject {
         if let minRating = minRating, minRating > 0 {
             urlString += "&vote_average.gte=\(minRating)&vote_count.gte=10"
         }
-        return try await fetchMediaList(from: urlString, mediaType: mediaType)
+        guard let url = URL(string: urlString) else { return ([], 0) }
+        let (data, _) = try await session.data(from: url)
+        let response = try JSONDecoder().decode(TMDbResponse<TMDbMediaItem>.self, from: data)
+        let items = response.results.map { item in
+            TMDbMediaItem(
+                id: item.id,
+                title: item.title,
+                name: item.name,
+                overview: item.overview,
+                posterPath: item.posterPath,
+                backdropPath: item.backdropPath,
+                voteAverage: item.voteAverage,
+                voteCount: item.voteCount,
+                releaseDate: item.releaseDate,
+                firstAirDate: item.firstAirDate,
+                mediaType: item.mediaType ?? mediaType,
+                genreIds: item.genreIds
+            )
+        }
+        return (items, response.totalPages ?? 1)
+    }
+    
+    public func fetchFilteredMedia(mediaType: String, genreId: Int?, year: String?, minRating: Double?) async throws -> [TMDbMediaItem] {
+        let (items, _) = try await fetchFilteredMediaPaginated(mediaType: mediaType, genreId: genreId, year: year, minRating: minRating, page: 1)
+        return items
     }
     
     // MARK: - Details & Credits
