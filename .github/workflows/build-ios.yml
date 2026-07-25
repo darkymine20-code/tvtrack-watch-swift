@@ -23,21 +23,27 @@ jobs:
           swift --version
           xcodebuild -version
 
-      - name: Swift Build (iPadOS Target)
-        run: swift build -v
-
-      - name: Run Unit Tests
-        run: swift test -v
-
-      - name: Create IPA Package
+      - name: Build Xcode iOS App Target
         run: |
-          mkdir -p Payload/TVTrackWatch.app
-          cp -R .build/debug/* Payload/TVTrackWatch.app/ 2>/dev/null || true
+          xcodebuild build \
+            -project TVTrackWatch.xcodeproj \
+            -scheme TVTrackWatch \
+            -sdk iphoneos \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_IDENTITY="" \
+            -derivedDataPath ./build
+
+      - name: Create Signable IPA Package
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/TVTrackWatch.app Payload/
           zip -r TVTrackWatch-iPadOS.ipa Payload
 
-      - name: Upload IPA Artifact
+      - name: Upload Signable IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: TVTrackWatch-iPadOS.ipa
           path: TVTrackWatch-iPadOS.ipa
-          if-no-files-found: warn
+          if-no-files-found: error

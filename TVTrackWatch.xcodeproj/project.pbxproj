@@ -1,0 +1,315 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		100000012A1B2C3D00000001 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000001 /* AppConfig.swift */; };
+		100000012A1B2C3D00000002 /* TVTrackWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000002 /* TVTrackWatchApp.swift */; };
+		100000012A1B2C3D00000003 /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000003 /* DataManager.swift */; };
+		100000012A1B2C3D00000004 /* WatchlistCategorizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000004 /* WatchlistCategorizer.swift */; };
+		100000012A1B2C3D00000005 /* IMDbModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000005 /* IMDbModels.swift */; };
+		100000012A1B2C3D00000006 /* LocalMediaItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000006 /* LocalMediaItem.swift */; };
+		100000012A1B2C3D00000007 /* TMDbModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000007 /* TMDbModels.swift */; };
+		100000012A1B2C3D00000008 /* TraktModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000008 /* TraktModels.swift */; };
+		100000012A1B2C3D00000009 /* IMDbScraperService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000009 /* IMDbScraperService.swift */; };
+		100000012A1B2C3D0000000A /* RecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000000A /* RecommendationEngine.swift */; };
+		100000012A1B2C3D0000000B /* StreamingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000000B /* StreamingEngine.swift */; };
+		100000012A1B2C3D0000000C /* TMDbService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000000C /* TMDbService.swift */; };
+		100000012A1B2C3D0000000D /* TraktService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000000D /* TraktService.swift */; };
+		100000012A1B2C3D0000000E /* EpisodeCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000000E /* EpisodeCardView.swift */; };
+		100000012A1B2C3D0000000F /* GlassCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000000F /* GlassCardView.swift */; };
+		100000012A1B2C3D00000010 /* RatingBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000010 /* RatingBarView.swift */; };
+		100000012A1B2C3D00000011 /* RatingWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000011 /* RatingWidgetView.swift */; };
+		100000012A1B2C3D00000012 /* MovieDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000012 /* MovieDetailsView.swift */; };
+		100000012A1B2C3D00000013 /* TVShowDetailsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000013 /* TVShowDetailsView.swift */; };
+		100000012A1B2C3D00000014 /* ExploreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000014 /* ExploreView.swift */; };
+		100000012A1B2C3D00000015 /* FilterSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000015 /* FilterSheetView.swift */; };
+		100000012A1B2C3D00000016 /* MoviesWatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000016 /* MoviesWatchlistView.swift */; };
+		100000012A1B2C3D00000017 /* iPadMainNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000017 /* iPadMainNavigationView.swift */; };
+		100000012A1B2C3D00000018 /* VideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000018 /* VideoPlayerView.swift */; };
+		100000012A1B2C3D00000019 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000019 /* ProfileView.swift */; };
+		100000012A1B2C3D0000001A /* TopStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000001A /* TopStatsView.swift */; };
+		100000012A1B2C3D0000001B /* TVShowsWatchlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000001B /* TVShowsWatchlistView.swift */; };
+		100000012A1B2C3D0000001C /* UpcomingCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000001C /* UpcomingCalendarView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		100000002A1B2C3D00000000 /* TVTrackWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TVTrackWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000002A1B2C3D00000001 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000002 /* TVTrackWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVTrackWatchApp.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000003 /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000004 /* WatchlistCategorizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistCategorizer.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000005 /* IMDbModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMDbModels.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000006 /* LocalMediaItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalMediaItem.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000007 /* TMDbModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMDbModels.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000008 /* TraktModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraktModels.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000009 /* IMDbScraperService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMDbScraperService.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000000A /* RecommendationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationEngine.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000000B /* StreamingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingEngine.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000000C /* TMDbService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TMDbService.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000000D /* TraktService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraktService.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000000E /* EpisodeCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EpisodeCardView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000000F /* GlassCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassCardView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000010 /* RatingBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingBarView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000011 /* RatingWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RatingWidgetView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000012 /* MovieDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovieDetailsView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000013 /* TVShowDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVShowDetailsView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000014 /* ExploreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000015 /* FilterSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilterSheetView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000016 /* MoviesWatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoviesWatchlistView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000017 /* iPadMainNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPadMainNavigationView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000018 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000019 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000001A /* TopStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopStatsView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000001B /* TVShowsWatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TVShowsWatchlistView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000001C /* UpcomingCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingCalendarView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D0000001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		100000022A1B2C3D00000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		100000032A1B2C3D00000000 = {
+			isa = PBXGroup;
+			children = (
+				100000032A1B2C3D00000001 /* TVTrackWatch */,
+				100000002A1B2C3D00000000 /* TVTrackWatch.app */,
+			);
+			sourceTree = "<group>";
+		};
+		100000032A1B2C3D00000001 /* TVTrackWatch */ = {
+			isa = PBXGroup;
+			children = (
+				100000002A1B2C3D00000001 /* AppConfig.swift */,
+				100000002A1B2C3D00000002 /* TVTrackWatchApp.swift */,
+				100000002A1B2C3D00000003 /* DataManager.swift */,
+				100000002A1B2C3D00000004 /* WatchlistCategorizer.swift */,
+				100000002A1B2C3D00000005 /* IMDbModels.swift */,
+				100000002A1B2C3D00000006 /* LocalMediaItem.swift */,
+				100000002A1B2C3D00000007 /* TMDbModels.swift */,
+				100000002A1B2C3D00000008 /* TraktModels.swift */,
+				100000002A1B2C3D00000009 /* IMDbScraperService.swift */,
+				100000002A1B2C3D0000000A /* RecommendationEngine.swift */,
+				100000002A1B2C3D0000000B /* StreamingEngine.swift */,
+				100000002A1B2C3D0000000C /* TMDbService.swift */,
+				100000002A1B2C3D0000000D /* TraktService.swift */,
+				100000002A1B2C3D0000000E /* EpisodeCardView.swift */,
+				100000002A1B2C3D0000000F /* GlassCardView.swift */,
+				100000002A1B2C3D00000010 /* RatingBarView.swift */,
+				100000002A1B2C3D00000011 /* RatingWidgetView.swift */,
+				100000002A1B2C3D00000012 /* MovieDetailsView.swift */,
+				100000002A1B2C3D00000013 /* TVShowDetailsView.swift */,
+				100000002A1B2C3D00000014 /* ExploreView.swift */,
+				100000002A1B2C3D00000015 /* FilterSheetView.swift */,
+				100000002A1B2C3D00000016 /* MoviesWatchlistView.swift */,
+				100000002A1B2C3D00000017 /* iPadMainNavigationView.swift */,
+				100000002A1B2C3D00000018 /* VideoPlayerView.swift */,
+				100000002A1B2C3D00000019 /* ProfileView.swift */,
+				100000002A1B2C3D0000001A /* TopStatsView.swift */,
+				100000002A1B2C3D0000001B /* TVShowsWatchlistView.swift */,
+				100000002A1B2C3D0000001C /* UpcomingCalendarView.swift */,
+				100000002A1B2C3D0000001D /* Info.plist */,
+			);
+			path = TVTrackWatch;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		100000042A1B2C3D00000000 /* TVTrackWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 100000062A1B2C3D00000000 /* Build configuration list for PBXNativeTarget "TVTrackWatch" */;
+			buildPhases = (
+				100000052A1B2C3D00000000 /* Sources */,
+				100000022A1B2C3D00000000 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TVTrackWatch;
+			productName = TVTrackWatch;
+			productReference = 100000002A1B2C3D00000000 /* TVTrackWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		100000072A1B2C3D00000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1540;
+				LastUpgradeCheck = 1540;
+				TargetAttributes = {
+					100000042A1B2C3D00000000 = {
+						CreatedOnToolsVersion = 15.4;
+					};
+				};
+			};
+			buildConfigurationList = 100000082A1B2C3D00000000 /* Build configuration list for PBXProject "TVTrackWatch" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 100000032A1B2C3D00000000;
+			productRefGroup = 100000032A1B2C3D00000000;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				100000042A1B2C3D00000000 /* TVTrackWatch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		100000052A1B2C3D00000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000012A1B2C3D00000001 /* AppConfig.swift in Sources */,
+				100000012A1B2C3D00000002 /* TVTrackWatchApp.swift in Sources */,
+				100000012A1B2C3D00000003 /* DataManager.swift in Sources */,
+				100000012A1B2C3D00000004 /* WatchlistCategorizer.swift in Sources */,
+				100000012A1B2C3D00000005 /* IMDbModels.swift in Sources */,
+				100000012A1B2C3D00000006 /* LocalMediaItem.swift in Sources */,
+				100000012A1B2C3D00000007 /* TMDbModels.swift in Sources */,
+				100000012A1B2C3D00000008 /* TraktModels.swift in Sources */,
+				100000012A1B2C3D00000009 /* IMDbScraperService.swift in Sources */,
+				100000012A1B2C3D0000000A /* RecommendationEngine.swift in Sources */,
+				100000012A1B2C3D0000000B /* StreamingEngine.swift in Sources */,
+				100000012A1B2C3D0000000C /* TMDbService.swift in Sources */,
+				100000012A1B2C3D0000000D /* TraktService.swift in Sources */,
+				100000012A1B2C3D0000000E /* EpisodeCardView.swift in Sources */,
+				100000012A1B2C3D0000000F /* GlassCardView.swift in Sources */,
+				100000012A1B2C3D00000010 /* RatingBarView.swift in Sources */,
+				100000012A1B2C3D00000011 /* RatingWidgetView.swift in Sources */,
+				100000012A1B2C3D00000012 /* MovieDetailsView.swift in Sources */,
+				100000012A1B2C3D00000013 /* TVShowDetailsView.swift in Sources */,
+				100000012A1B2C3D00000014 /* ExploreView.swift in Sources */,
+				100000012A1B2C3D00000015 /* FilterSheetView.swift in Sources */,
+				100000012A1B2C3D00000016 /* MoviesWatchlistView.swift in Sources */,
+				100000012A1B2C3D00000017 /* iPadMainNavigationView.swift in Sources */,
+				100000012A1B2C3D00000018 /* VideoPlayerView.swift in Sources */,
+				100000012A1B2C3D00000019 /* ProfileView.swift in Sources */,
+				100000012A1B2C3D0000001A /* TopStatsView.swift in Sources */,
+				100000012A1B2C3D0000001B /* TVShowsWatchlistView.swift in Sources */,
+				100000012A1B2C3D0000001C /* UpcomingCalendarView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		100000092A1B2C3D00000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TVTrackWatch/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tvtrackwatch.ipad;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "2";
+			};
+			name = Debug;
+		};
+		100000092A1B2C3D00000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TVTrackWatch/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tvtrackwatch.ipad;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "2";
+			};
+			name = Release;
+		};
+		1000000A2A1B2C3D00000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TVTrackWatch/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tvtrackwatch.ipad;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "2";
+			};
+			name = Debug;
+		};
+		1000000A2A1B2C3D00000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TVTrackWatch/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tvtrackwatch.ipad;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		100000062A1B2C3D00000000 /* Build configuration list for PBXNativeTarget "TVTrackWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				100000092A1B2C3D00000001 /* Debug */,
+				100000092A1B2C3D00000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		100000082A1B2C3D00000000 /* Build configuration list for PBXProject "TVTrackWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1000000A2A1B2C3D00000001 /* Debug */,
+				1000000A2A1B2C3D00000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 100000072A1B2C3D00000000 /* Project object */;
+}
