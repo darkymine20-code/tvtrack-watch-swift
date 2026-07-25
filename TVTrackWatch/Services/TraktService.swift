@@ -97,7 +97,7 @@ public final class TraktService: ObservableObject {
                 likes: 412,
                 replies: 24,
                 createdAt: "2026-07-24T14:30:00.000Z",
-                user: TraktUser(username: "TraktVipMember", name: "Alex Cinema", vip: true)
+                user: TraktUser(username: "TraktVipMember", name: "Alex Cinema", vip: true, images: nil)
             ),
             TraktComment(
                 id: 102,
@@ -108,7 +108,7 @@ public final class TraktService: ObservableObject {
                 likes: 285,
                 replies: 12,
                 createdAt: "2026-07-22T18:15:00.000Z",
-                user: TraktUser(username: "FilmGeek_UK", name: "David M.", vip: false)
+                user: TraktUser(username: "FilmGeek_UK", name: "David M.", vip: false, images: nil)
             ),
             TraktComment(
                 id: 103,
@@ -119,7 +119,7 @@ public final class TraktService: ObservableObject {
                 likes: 198,
                 replies: 8,
                 createdAt: "2026-07-20T09:45:00.000Z",
-                user: TraktUser(username: "CineTrackPro", name: "Sarah K.", vip: true)
+                user: TraktUser(username: "CineTrackPro", name: "Sarah K.", vip: true, images: nil)
             ),
             TraktComment(
                 id: 104,
@@ -130,7 +130,7 @@ public final class TraktService: ObservableObject {
                 likes: 156,
                 replies: 6,
                 createdAt: "2026-07-18T16:20:00.000Z",
-                user: TraktUser(username: "MovieBuff99", name: "Chris P.", vip: false)
+                user: TraktUser(username: "MovieBuff99", name: "Chris P.", vip: false, images: nil)
             ),
             TraktComment(
                 id: 105,
@@ -141,7 +141,7 @@ public final class TraktService: ObservableObject {
                 likes: 114,
                 replies: 3,
                 createdAt: "2026-07-15T11:10:00.000Z",
-                user: TraktUser(username: "iPadStreamer", name: "Jessica R.", vip: true)
+                user: TraktUser(username: "iPadStreamer", name: "Jessica R.", vip: true, images: nil)
             )
         ]
     }

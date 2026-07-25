@@ -70,6 +70,23 @@ public struct TraktUser: Codable {
     public let username: String
     public let name: String?
     public let vip: Bool?
+    public let images: TraktUserImages?
+    
+    public var avatarURL: URL? {
+        if let full = images?.avatar?.full, let url = URL(string: full) {
+            return url
+        }
+        let encoded = username.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) ?? "User"
+        return URL(string: "https://api.dicebear.com/7.x/bottts/png?seed=\(encoded)")
+    }
+}
+
+public struct TraktUserImages: Codable {
+    public let avatar: TraktUserAvatar?
+}
+
+public struct TraktUserAvatar: Codable {
+    public let full: String?
 }
 
 public struct TraktRatingSummary: Codable {

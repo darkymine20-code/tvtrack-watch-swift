@@ -278,14 +278,52 @@ public struct MovieDetailsView: View {
                         // Trakt Tab
                         ForEach(traktComments) { comment in
                             GlassCardView {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack(spacing: 12) {
+                                        // User Profile Picture Avatar
+                                        if let avatarURL = comment.user.avatarURL {
+                                            AsyncImage(url: avatarURL) { img in
+                                                img.resizable().aspectRatio(contentMode: .fill)
+                                            } placeholder: {
+                                                Circle().fill(Color.red.opacity(0.4))
+                                                    .overlay(Text(String(comment.user.username.prefix(1)).uppercased()).font(.caption).fontWeight(.black).foregroundColor(.white))
+                                            }
+                                            .frame(width: 38, height: 38)
+                                            .clipShape(Circle())
+                                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                                        } else {
+                                            Circle()
+                                                .fill(Color.red.opacity(0.4))
+                                                .frame(width: 38, height: 38)
+                                                .overlay(Text(String(comment.user.username.prefix(1)).uppercased()).font(.caption).fontWeight(.black).foregroundColor(.white))
+                                        }
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            HStack(spacing: 6) {
+                                                Text(comment.user.name ?? comment.user.username)
+                                                    .font(.subheadline).fontWeight(.bold)
+                                                    .foregroundColor(.white)
+                                                
+                                                if comment.user.vip == true {
+                                                    Text("VIP")
+                                                        .font(.caption2).fontWeight(.black)
+                                                        .padding(.horizontal, 5).padding(.vertical, 2)
+                                                        .background(Color.purple)
+                                                        .foregroundColor(.white)
+                                                        .cornerRadius(4)
+                                                }
+                                            }
+                                            
+                                            Text("@\(comment.user.username)")
+                                                .font(.caption2)
+                                                .foregroundColor(.gray)
+                                        }
+                                        
+                                        Spacer()
+                                        
                                         Text(comment.reactionEmoji)
                                             .font(.title2)
-                                        Text(comment.user.username)
-                                            .font(.subheadline).fontWeight(.bold)
-                                            .foregroundColor(.red)
-                                        Spacer()
+                                        
                                         Text(comment.formattedDate)
                                             .font(.caption2).foregroundColor(.gray)
                                     }
