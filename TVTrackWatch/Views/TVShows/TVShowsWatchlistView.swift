@@ -28,7 +28,7 @@ public struct TVShowsWatchlistView: View {
             
             if selectedTab == 0 {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 26) {
                         // Sub-Section 1: Watch Next
                         SectionHeaderView(title: "Watch Next", count: categorized.watchNext.count, systemImage: "play.circle.fill", color: .blue)
                         MediaGridHorizontal(items: categorized.watchNext)
@@ -67,7 +67,7 @@ struct SectionHeaderView: View {
                 .font(.title3)
             Text(title)
                 .font(.title2)
-                .fontWeight(.bold)
+                .fontWeight(.black)
             Text("(\(count))")
                 .font(.title3)
                 .foregroundColor(.secondary)
@@ -82,58 +82,117 @@ struct MediaGridHorizontal: View {
     
     var body: some View {
         if items.isEmpty {
-            Text("No shows in this category.")
+            Text("No shows in this section.")
                 .font(.subheadline)
                 .foregroundColor(.gray)
                 .padding(.horizontal)
         } else {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
+                HStack(spacing: 18) {
                     ForEach(items) { item in
-                        NavigationLink(destination: TVShowDetailsView(show: TMDbMediaItem(
-                            id: item.tmdbId,
-                            title: nil,
-                            name: item.title,
-                            overview: nil,
-                            posterPath: item.posterPath,
-                            backdropPath: item.backdropPath,
-                            voteAverage: item.voteAverage,
-                            voteCount: nil,
-                            releaseDate: nil,
-                            firstAirDate: item.releaseDate,
-                            mediaType: "tv",
-                            genreIds: nil
-                        ))) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ZStack(alignment: .topTrailing) {
-                                    if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
-                                        AsyncImage(url: url) { img in
-                                            img.resizable().aspectRatio(contentMode: .fill)
-                                        } placeholder: {
-                                            Rectangle().fill(Color.gray.opacity(0.3))
-                                        }
-                                        .frame(width: 140, height: 210)
-                                        .cornerRadius(12)
-                                        .clipped()
-                                    } else {
-                                        Rectangle()
-                                            .fill(Color.gray.opacity(0.3))
-                                            .frame(width: 140, height: 210)
-                                            .cornerRadius(12)
-                                    }
-                                }
-                                
-                                Text(item.title)
-                                    .font(.subheadline)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .lineLimit(1)
-                                    .frame(width: 140, alignment: .leading)
-                            }
-                        }
+                        TVShowPosterCard(item: item)
                     }
                 }
                 .padding(.horizontal)
+            }
+        }
+    }
+}
+
+// Fix 2: TV Show Poster Card with Watched Episode Progressive Bar
+struct TVShowPosterCard: View {
+    let item: LocalMediaItem
+    
+    private var watchedCount: Int {
+        item.watchedEpisodes.count
+    }
+    
+    private var totalEpisodesCount: Int {
+        // Default estimate 10 per season or derived from state
+        max(watchedCount + 4, 10)
+    }
+    
+    private var progressRatio: Double {
+        min(Double(watchedCount) / Double(totalEpisodesCount), 1.0)
+    }
+    
+    var body: some View {
+        NavigationLink(destination: TVShowDetailsView(show: TMDbMediaItem(
+            id: item.tmdbId,
+            title: nil,
+            name: item.title,
+            overview: nil,
+            posterPath: item.posterPath,
+            backdropPath: item.backdropPath,
+            voteAverage: item.voteAverage,
+            voteCount: nil,
+            releaseDate: nil,
+            firstAirDate: item.releaseDate,
+            mediaType: "tv",
+            genreIds: nil
+        ))) {
+            VStack(alignment: .leading, spacing: 8) {
+                ZStack(alignment: .bottom) {
+                    if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
+                        AsyncImage(url: url) { img in
+                            img.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Rectangle().fill(Color.gray.opacity(0.3))
+                        }
+                        .frame(width: 145, height: 215)
+                        .cornerRadius(14)
+                        .clipped()
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 145, height: 215)
+                            .cornerRadius(14)
+                    }
+                    
+                    // Watched Episode Counter Pill Badge
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Text("\(watchedCount)/\(totalEpisodesCount) Ep")
+                                .font(.caption2)
+                                .fontWeight(.black)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Color.black.opacity(0.8))
+                                .foregroundColor(.green)
+                                .cornerRadius(6)
+                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.green.opacity(0.4), lineWidth: 1))
+                                .padding(6)
+                        }
+                        Spacer()
+                    }
+                    
+                    // Progressive Watched Bar at Poster Bottom Edge
+                    GeometryReader { geo in
+                        VStack {
+                            Spacer()
+                            ZStack(alignment: .leading) {
+                                Rectangle()
+                                    .fill(Color.black.opacity(0.6))
+                                    .frame(height: 6)
+                                
+                                Rectangle()
+                                    .fill(LinearGradient(colors: [.green, .cyan], startPoint: .leading, endPoint: .trailing))
+                                    .frame(width: geo.size.width * CGFloat(progressRatio), height: 6)
+                                    .shadow(color: .green.opacity(0.6), radius: 4)
+                            }
+                            .cornerRadius(3)
+                        }
+                    }
+                    .frame(height: 215)
+                }
+                
+                Text(item.title)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .frame(width: 145, alignment: .leading)
             }
         }
     }

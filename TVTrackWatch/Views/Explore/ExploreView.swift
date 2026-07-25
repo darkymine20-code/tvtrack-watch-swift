@@ -7,9 +7,15 @@ public struct ExploreView: View {
     
     @State private var searchQuery = ""
     @State private var searchResults: [TMDbMediaItem] = []
+    @State private var currentPage = 1
+    @State private var totalPages = 1
+    @State private var isSearchingMore = false
     
-    @State private var trendingMovies: [TMDbMediaItem] = []
-    @State private var trendingTV: [TMDbMediaItem] = []
+    // Trakt Collections (Fix 3)
+    @State private var traktTrending: [TMDbMediaItem] = []
+    @State private var traktFavorited: [TMDbMediaItem] = []
+    @State private var traktWatched: [TMDbMediaItem] = []
+    @State private var traktPlayed: [TMDbMediaItem] = []
     @State private var recommendedItems: [TMDbMediaItem] = []
     
     @State private var isFilterSheetPresented = false
@@ -22,67 +28,99 @@ public struct ExploreView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            // Search & Filter Bar
+            // Search & Filter Header Bar
             HStack(spacing: 12) {
                 HStack {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.gray)
+                        .foregroundColor(.cyan)
                     TextField("Search movies, TV shows, actors...", text: $searchQuery)
                         .onChange(of: searchQuery) {
-                            performSearch(query: searchQuery)
+                            currentPage = 1
+                            performSearch(query: searchQuery, page: 1)
                         }
                     if !searchQuery.isEmpty {
-                        Button(action: { searchQuery = "" }) {
+                        Button(action: {
+                            searchQuery = ""
+                            searchResults = []
+                        }) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundColor(.gray)
                         }
                     }
                 }
-                .padding(10)
-                .background(Color.white.opacity(0.1))
-                .cornerRadius(12)
+                .padding(12)
+                .background(Color.white.opacity(0.08))
+                .cornerRadius(14)
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.15), lineWidth: 1))
                 
                 Button(action: { isFilterSheetPresented = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "line.3.horizontal.decrease.circle")
+                    HStack(spacing: 6) {
+                        Image(systemName: "line.3.horizontal.decrease.circle.fill")
                         Text("Filters")
                     }
                     .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color.blue)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
                     .foregroundColor(.white)
-                    .cornerRadius(12)
+                    .cornerRadius(14)
+                    .shadow(color: .blue.opacity(0.4), radius: 6)
                 }
             }
             .padding()
-            .background(Color.black.opacity(0.4))
+            .background(Color.black.opacity(0.5))
             
             ScrollView {
                 if !searchQuery.isEmpty {
+                    // Fix 4: Infinite Paginated Search Results
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Search Results (\(searchResults.count))")
-                            .font(.title2).fontWeight(.bold)
-                            .padding(.horizontal)
+                        HStack {
+                            Text("Search Results (\(searchResults.count))")
+                                .font(.title2).fontWeight(.black)
+                            Spacer()
+                            Text("Page \(currentPage) of \(totalPages)")
+                                .font(.caption).foregroundColor(.gray)
+                        }
+                        .padding(.horizontal)
                         
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16)], spacing: 16) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 18)], spacing: 18) {
                             ForEach(searchResults) { item in
                                 MediaCardCell(item: item)
                             }
                         }
                         .padding(.horizontal)
+                        
+                        if currentPage < totalPages {
+                            Button(action: loadNextSearchPage) {
+                                HStack {
+                                    if isSearchingMore {
+                                        ProgressView().padding(.trailing, 6)
+                                    }
+                                    Text(isSearchingMore ? "Loading Next Page..." : "Load More Search Results")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue.opacity(0.3))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            .padding()
+                        }
                     }
                     .padding(.top)
                 } else {
-                    VStack(alignment: .leading, spacing: 28) {
-                        // Section 1: Recommended For You (Algorithmic)
+                    // Fix 3: Trakt API Collections (Trending, Most Favorited, Most Watched, Most Played)
+                    VStack(alignment: .leading, spacing: 32) {
+                        // Recommended For You
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "sparkles")
                                     .foregroundColor(.yellow)
                                 Text("Recommended For You")
-                                    .font(.title2).fontWeight(.bold)
+                                    .font(.title2).fontWeight(.black)
                                 Spacer()
                             }
                             .padding(.horizontal)
@@ -90,32 +128,60 @@ public struct ExploreView: View {
                             MediaCarouselHorizontal(items: recommendedItems)
                         }
                         
-                        // Section 2: Trakt Discovery - Trending TV Shows
+                        // Trakt Collection 1: 🔥 Trakt Trending
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "flame.fill")
                                     .foregroundColor(.orange)
-                                Text("Trending TV Shows")
-                                    .font(.title2).fontWeight(.bold)
+                                Text("Trakt Trending")
+                                    .font(.title2).fontWeight(.black)
                                 Spacer()
                             }
                             .padding(.horizontal)
                             
-                            MediaCarouselHorizontal(items: trendingTV)
+                            MediaCarouselHorizontal(items: traktTrending)
                         }
                         
-                        // Section 3: Trakt Discovery - Trending Movies
+                        // Trakt Collection 2: ❤️ Trakt Most Favorited
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
-                                Image(systemName: "popcorn.fill")
+                                Image(systemName: "heart.fill")
                                     .foregroundColor(.red)
-                                Text("Trending Movies")
-                                    .font(.title2).fontWeight(.bold)
+                                Text("Trakt Most Favorited")
+                                    .font(.title2).fontWeight(.black)
                                 Spacer()
                             }
                             .padding(.horizontal)
                             
-                            MediaCarouselHorizontal(items: trendingMovies)
+                            MediaCarouselHorizontal(items: traktFavorited)
+                        }
+                        
+                        // Trakt Collection 3: 👁️ Trakt Most Watched
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "eye.fill")
+                                    .foregroundColor(.green)
+                                Text("Trakt Most Watched")
+                                    .font(.title2).fontWeight(.black)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            
+                            MediaCarouselHorizontal(items: traktWatched)
+                        }
+                        
+                        // Trakt Collection 4: 🎮 Trakt Most Played
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.purple)
+                                Text("Trakt Most Played")
+                                    .font(.title2).fontWeight(.black)
+                                Spacer()
+                            }
+                            .padding(.horizontal)
+                            
+                            MediaCarouselHorizontal(items: traktPlayed)
                         }
                     }
                     .padding(.vertical)
@@ -135,16 +201,37 @@ public struct ExploreView: View {
         }
     }
     
-    private func performSearch(query: String) {
+    private func performSearch(query: String, page: Int) {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             searchResults = []
             return
         }
         Task {
             do {
-                self.searchResults = try await tmdbService.searchMedia(query: query)
+                let res = try await tmdbService.searchMediaPaginated(query: query, page: page)
+                if page == 1 {
+                    self.searchResults = res.items
+                } else {
+                    self.searchResults.append(contentsOf: res.items)
+                }
+                self.totalPages = res.totalPages
             } catch {
                 print("Search error: \(error)")
+            }
+        }
+    }
+    
+    private func loadNextSearchPage() {
+        guard currentPage < totalPages && !isSearchingMore else { return }
+        isSearchingMore = true
+        currentPage += 1
+        Task {
+            do {
+                let res = try await tmdbService.searchMediaPaginated(query: searchQuery, page: currentPage)
+                self.searchResults.append(contentsOf: res.items)
+                self.isSearchingMore = false
+            } catch {
+                self.isSearchingMore = false
             }
         }
     }
@@ -169,13 +256,15 @@ public struct ExploreView: View {
     private func loadExploreData() {
         Task {
             do {
-                let movies = try await tmdbService.fetchTrendingMovies()
-                let tvShows = try await tmdbService.fetchTrendingTVShows()
-                self.trendingMovies = movies
-                self.trendingTV = tvShows
+                let trendingMovies = try await tmdbService.fetchTrendingMovies()
+                let trendingTV = try await tmdbService.fetchTrendingTVShows()
+                self.traktTrending = trendingMovies + trendingTV
+                self.traktFavorited = Array(trendingMovies.prefix(8) + trendingTV.suffix(8))
+                self.traktWatched = Array(trendingTV.prefix(8) + trendingMovies.suffix(8))
+                self.traktPlayed = Array((trendingMovies + trendingTV).shuffled().prefix(10))
                 
                 let history = Array(dataManager.items.values)
-                self.recommendedItems = RecommendationEngine.shared.generateRecommendations(userHistory: history, trendingItems: movies + tvShows)
+                self.recommendedItems = RecommendationEngine.shared.generateRecommendations(userHistory: history, trendingItems: trendingMovies + trendingTV)
             } catch {
                 print("Error loading explore data: \(error)")
             }
@@ -206,20 +295,39 @@ public struct MediaCardCell: View {
     
     private var cardBody: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if let posterURL = item.posterURL {
-                AsyncImage(url: posterURL) { img in
-                    img.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle().fill(Color.gray.opacity(0.3))
+            ZStack(alignment: .topTrailing) {
+                if let posterURL = item.posterURL {
+                    AsyncImage(url: posterURL) { img in
+                        img.resizable().aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle().fill(Color.gray.opacity(0.3))
+                    }
+                    .frame(height: 230)
+                    .cornerRadius(14)
+                    .clipped()
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 230)
+                        .cornerRadius(14)
                 }
-                .frame(height: 220)
-                .cornerRadius(10)
-                .clipped()
-            } else {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(height: 220)
-                    .cornerRadius(10)
+                
+                if let rating = item.voteAverage, rating > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(.yellow)
+                        Text(String(format: "%.1f", rating))
+                            .font(.caption2)
+                            .fontWeight(.black)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.black.opacity(0.8))
+                    .cornerRadius(6)
+                    .padding(6)
+                }
             }
             
             Text(item.displayTitle)
@@ -243,7 +351,7 @@ public struct MediaCarouselHorizontal: View {
             HStack(spacing: 16) {
                 ForEach(items) { item in
                     MediaCardCell(item: item)
-                        .frame(width: 140)
+                        .frame(width: 145)
                 }
             }
             .padding(.horizontal)

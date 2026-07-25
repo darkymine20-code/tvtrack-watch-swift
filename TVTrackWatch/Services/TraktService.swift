@@ -15,34 +15,69 @@ public final class TraktService: ObservableObject {
         ]
     }
     
-    // MARK: - Public Discovery Feeds
-    public func fetchTrendingShows() async throws -> [TraktTrendingShow] {
-        let urlString = "\(AppConfig.traktBaseURL)/shows/trending?extended=full"
-        return try await fetchAndDecode(urlString: urlString)
-    }
-    
-    public func fetchTrendingMovies() async throws -> [TraktTrendingMovie] {
-        let urlString = "\(AppConfig.traktBaseURL)/movies/trending?extended=full"
-        return try await fetchAndDecode(urlString: urlString)
-    }
-    
-    public func fetchPopularShows() async throws -> [TraktShow] {
-        let urlString = "\(AppConfig.traktBaseURL)/shows/popular?extended=full"
-        return try await fetchAndDecode(urlString: urlString)
-    }
-    
-    public func fetchPopularMovies() async throws -> [TraktMovie] {
-        let urlString = "\(AppConfig.traktBaseURL)/movies/popular?extended=full"
-        return try await fetchAndDecode(urlString: urlString)
-    }
-    
-    public func fetchAnticipatedShows() async throws -> [TraktShow] {
-        let urlString = "\(AppConfig.traktBaseURL)/shows/anticipated?extended=full"
-        struct AnticipatedShowWrapper: Codable {
-            let show: TraktShow
+    // MARK: - Trakt Generic Item Wrapper
+    public struct TraktItemWrapper: Codable {
+        public let watcherCount: Int?
+        public let playCount: Int?
+        public let collectorCount: Int?
+        public let movie: TraktMovie?
+        public let show: TraktShow?
+        
+        enum CodingKeys: String, CodingKey {
+            case watcherCount = "watcher_count"
+            case playCount = "play_count"
+            case collectorCount = "collector_count"
+            case movie, show
         }
-        let list: [AnticipatedShowWrapper] = try await fetchAndDecode(urlString: urlString)
-        return list.map { $0.show }
+    }
+    
+    // MARK: - Discovery Feeds (Trending, Most Favorited, Most Watched, Most Played)
+    public func fetchTrendingShows() async throws -> [TraktShow] {
+        let urlString = "\(AppConfig.traktBaseURL)/shows/trending?extended=full"
+        let list: [TraktItemWrapper] = try await fetchAndDecode(urlString: urlString)
+        return list.compactMap { $0.show }
+    }
+    
+    public func fetchTrendingMovies() async throws -> [TraktMovie] {
+        let urlString = "\(AppConfig.traktBaseURL)/movies/trending?extended=full"
+        let list: [TraktItemWrapper] = try await fetchAndDecode(urlString: urlString)
+        return list.compactMap { $0.movie }
+    }
+    
+    public func fetchFavoritedShows() async throws -> [TraktShow] {
+        let urlString = "\(AppConfig.traktBaseURL)/shows/favorited?extended=full"
+        let list: [TraktItemWrapper] = try await fetchAndDecode(urlString: urlString)
+        return list.compactMap { $0.show }
+    }
+    
+    public func fetchFavoritedMovies() async throws -> [TraktMovie] {
+        let urlString = "\(AppConfig.traktBaseURL)/movies/favorited?extended=full"
+        let list: [TraktItemWrapper] = try await fetchAndDecode(urlString: urlString)
+        return list.compactMap { $0.movie }
+    }
+    
+    public func fetchWatchedShows() async throws -> [TraktShow] {
+        let urlString = "\(AppConfig.traktBaseURL)/shows/watched?extended=full"
+        let list: [TraktItemWrapper] = try await fetchAndDecode(urlString: urlString)
+        return list.compactMap { $0.show }
+    }
+    
+    public func fetchWatchedMovies() async throws -> [TraktMovie] {
+        let urlString = "\(AppConfig.traktBaseURL)/movies/watched?extended=full"
+        let list: [TraktItemWrapper] = try await fetchAndDecode(urlString: urlString)
+        return list.compactMap { $0.movie }
+    }
+    
+    public func fetchPlayedShows() async throws -> [TraktShow] {
+        let urlString = "\(AppConfig.traktBaseURL)/shows/played?extended=full"
+        let list: [TraktItemWrapper] = try await fetchAndDecode(urlString: urlString)
+        return list.compactMap { $0.show }
+    }
+    
+    public func fetchPlayedMovies() async throws -> [TraktMovie] {
+        let urlString = "\(AppConfig.traktBaseURL)/movies/played?extended=full"
+        let list: [TraktItemWrapper] = try await fetchAndDecode(urlString: urlString)
+        return list.compactMap { $0.movie }
     }
     
     // MARK: - Public Community Comments (Fetching up to 100 comments)

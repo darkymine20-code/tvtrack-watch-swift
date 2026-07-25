@@ -18,13 +18,20 @@ public final class TMDbService: ObservableObject {
         return try await fetchMediaList(from: urlString, mediaType: "tv")
     }
     
-    public func searchMedia(query: String) async throws -> [TMDbMediaItem] {
-        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return [] }
-        let urlString = "\(AppConfig.tmdbBaseURL)/search/multi?api_key=\(apiKey)&query=\(encodedQuery)"
-        guard let url = URL(string: urlString) else { return [] }
+    // MARK: - Paginated Infinite Search (Fix 4)
+    public func searchMediaPaginated(query: String, page: Int = 1) async throws -> (items: [TMDbMediaItem], totalPages: Int) {
+        guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return ([], 0) }
+        let urlString = "\(AppConfig.tmdbBaseURL)/search/multi?api_key=\(apiKey)&query=\(encodedQuery)&page=\(page)"
+        guard let url = URL(string: urlString) else { return ([], 0) }
         let (data, _) = try await session.data(from: url)
         let response = try JSONDecoder().decode(TMDbResponse<TMDbMediaItem>.self, from: data)
-        return response.results.filter { $0.mediaType == "movie" || $0.mediaType == "tv" }
+        let filtered = response.results.filter { $0.mediaType == "movie" || $0.mediaType == "tv" }
+        return (filtered, response.totalPages ?? 1)
+    }
+    
+    public func searchMedia(query: String) async throws -> [TMDbMediaItem] {
+        let (items, _) = try await searchMediaPaginated(query: query, page: 1)
+        return items
     }
     
     public func fetchFilteredMedia(mediaType: String, genreId: Int?, year: String?, minRating: Double?) async throws -> [TMDbMediaItem] {

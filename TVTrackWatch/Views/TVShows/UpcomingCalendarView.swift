@@ -32,24 +32,27 @@ public struct UpcomingCalendarView: View {
                     .padding(.horizontal)
                 
                 if isLoading {
-                    ProgressView("Loading upcoming episode schedules...")
+                    ProgressView("Checking upcoming episode release schedules...")
                         .frame(maxWidth: .infinity)
                         .padding(.top, 40)
                 } else if upcomingDetailsList.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "calendar.badge.exclamationmark")
-                            .font(.system(size: 54))
-                            .foregroundColor(.gray)
-                        Text("No upcoming episodes scheduled for your Watchlist.")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        Text("Add TV shows to your Watchlist to automatically track new episode air dates here.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
+                    GlassCardView {
+                        VStack(spacing: 12) {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.system(size: 54))
+                                .foregroundColor(.blue)
+                            Text("No Unreleased Episodes Currently Scheduled")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text("Shows in your Watchlist are fully caught up or waiting for official future release announcement dates.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 40)
+                    .padding(.horizontal)
                 } else {
                     LazyVStack(spacing: 16) {
                         ForEach(upcomingDetailsList) { item in
@@ -61,7 +64,7 @@ public struct UpcomingCalendarView: View {
                                         } placeholder: {
                                             Rectangle().fill(Color.gray.opacity(0.3))
                                         }
-                                        .frame(width: 100, height: 75)
+                                        .frame(width: 110, height: 75)
                                         .cornerRadius(10)
                                         .clipped()
                                     }
@@ -89,9 +92,9 @@ public struct UpcomingCalendarView: View {
                                         }
                                         
                                         HStack(spacing: 6) {
-                                            Image(systemName: "calendar")
+                                            Image(systemName: "clock.fill")
                                                 .foregroundColor(.green)
-                                            Text("Airing: \(item.airDate)")
+                                            Text("Upcoming Release: \(item.airDate)")
                                                 .font(.caption)
                                                 .fontWeight(.bold)
                                                 .foregroundColor(.green)
@@ -112,29 +115,35 @@ public struct UpcomingCalendarView: View {
         }
     }
     
+    // Fix 1: Filter ONLY unreleased episodes (airDate >= today)
     private func loadUpcomingSchedule() async {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayStr = dateFormatter.string(from: Date())
+        
         var results: [UpcomingShowItem] = []
         for item in watchlistItems {
             do {
                 let tv = try await tmdbService.fetchTVDetails(id: item.tmdbId)
-                if let seasons = tv.seasons, let latestSeason = seasons.last(where: { $0.seasonNumber > 0 }) {
-                    let seasonDetails = try await tmdbService.fetchSeasonDetails(tvId: item.tmdbId, seasonNumber: latestSeason.seasonNumber)
-                    for ep in seasonDetails.episodes {
-                        let dateStr = ep.airDate ?? ""
-                        if !dateStr.isEmpty {
-                            results.append(
-                                UpcomingShowItem(
-                                    showId: item.tmdbId,
-                                    showTitle: tv.name,
-                                    posterPath: tv.posterPath,
-                                    seasonNumber: ep.seasonNumber,
-                                    episodeNumber: ep.episodeNumber,
-                                    episodeName: ep.name,
-                                    airDate: dateStr,
-                                    overview: ep.overview,
-                                    stillPath: ep.stillPath
+                if let seasons = tv.seasons {
+                    for seasonSummary in seasons where seasonSummary.seasonNumber > 0 {
+                        let seasonDetails = try await tmdbService.fetchSeasonDetails(tvId: item.tmdbId, seasonNumber: seasonSummary.seasonNumber)
+                        for ep in seasonDetails.episodes {
+                            if let dateStr = ep.airDate, !dateStr.isEmpty, dateStr >= todayStr {
+                                results.append(
+                                    UpcomingShowItem(
+                                        showId: item.tmdbId,
+                                        showTitle: tv.name,
+                                        posterPath: tv.posterPath,
+                                        seasonNumber: ep.seasonNumber,
+                                        episodeNumber: ep.episodeNumber,
+                                        episodeName: ep.name,
+                                        airDate: dateStr,
+                                        overview: ep.overview,
+                                        stillPath: ep.stillPath
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }
