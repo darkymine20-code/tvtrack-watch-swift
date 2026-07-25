@@ -298,7 +298,7 @@ public struct MovieDetailsView: View {
             }
         }
         .fullScreenCover(isPresented: $isPlayerPresented) {
-            VideoPlayerView(tmdbId: movie.id, mediaType: "movie", title: movie.displayTitle)
+            VideoPlayerView(title: movie.displayTitle, tmdbId: movie.id, isTV: false)
         }
         .task {
             loadMovieDetails()

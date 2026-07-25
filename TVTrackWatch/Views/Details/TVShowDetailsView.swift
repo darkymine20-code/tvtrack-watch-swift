@@ -302,11 +302,11 @@ public struct TVShowDetailsView: View {
         .fullScreenCover(isPresented: $isPlayerPresented) {
             if let ep = activeEpisode {
                 VideoPlayerView(
-                    tmdbId: show.id,
-                    mediaType: "tv",
                     title: "\(show.displayTitle) S\(ep.season)E\(ep.episode)",
-                    season: ep.season,
-                    episode: ep.episode
+                    tmdbId: show.id,
+                    isTV: true,
+                    seasonNumber: ep.season,
+                    episodeNumber: ep.episode
                 )
             }
         }
