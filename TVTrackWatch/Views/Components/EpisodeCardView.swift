@@ -13,6 +13,32 @@ public struct EpisodeCardView: View {
         self.onPlay = onPlay
     }
     
+    @State private var currentDate = Date()
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    
+    private var countdownText: String? {
+        guard let dateStr = episode.airDate, !dateStr.isEmpty else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let targetDate = formatter.date(from: dateStr) else { return nil }
+        
+        let diff = targetDate.timeIntervalSince(currentDate)
+        if diff <= 0 { return nil }
+        
+        let days = Int(diff) / 86400
+        let hours = (Int(diff) % 86400) / 3600
+        let minutes = (Int(diff) % 3600) / 60
+        let seconds = Int(diff) % 60
+        
+        if days > 0 {
+            return "\(days)d \(hours)h \(minutes)m"
+        } else if hours > 0 {
+            return "\(hours)h \(minutes)m \(seconds)s"
+        } else {
+            return "\(minutes)m \(seconds)s"
+        }
+    }
+    
     public var body: some View {
         HStack(spacing: 16) {
             // Episode Thumbnail
@@ -49,7 +75,24 @@ public struct EpisodeCardView: View {
                         .font(.headline)
                         .lineLimit(1)
                     Spacer()
-                    if let airDate = episode.airDate {
+                    
+                    if let countdown = countdownText {
+                        HStack(spacing: 4) {
+                            Image(systemName: "timer")
+                                .font(.caption2)
+                            Text("Airs in: \(countdown)")
+                                .font(.caption).fontWeight(.bold)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.yellow.opacity(0.25))
+                        .foregroundColor(.yellow)
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.yellow.opacity(0.4), lineWidth: 1)
+                        )
+                    } else if let airDate = episode.airDate {
                         Text(airDate)
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -100,5 +143,8 @@ public struct EpisodeCardView: View {
         .padding()
         .background(Color.white.opacity(0.05))
         .cornerRadius(12)
+        .onReceive(timer) { _ in
+            currentDate = Date()
+        }
     }
 }
