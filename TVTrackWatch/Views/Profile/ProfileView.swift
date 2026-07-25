@@ -1,8 +1,16 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 public struct ProfileView: View {
     @ObservedObject var dataManager = DataManager.shared
     @State private var selectedFilter: ProfileFilter = .watchedMovies
+    
+    @State private var isCSVImporterPresented = false
+    @State private var isImporting = false
+    @State private var importProgressMessage = ""
+    @State private var importCurrent = 0
+    @State private var importTotal = 0
+    @State private var importSummary: IMDbImportResult? = nil
     
     public enum ProfileFilter: String, CaseIterable, Identifiable {
         case watchedMovies = "Watched Movies"
@@ -69,7 +77,7 @@ public struct ProfileView: View {
     }
     
     private var stats: (topActors: [PersonStat], topDirectors: [PersonStat]) {
-        WatchlistCategorizer.calculateTopStats(items: allItems, minThreshold: 4)
+        WatchlistCategorizer.calculateTopStats(items: allItems, minThreshold: 1)
     }
     
     public var body: some View {
@@ -91,6 +99,21 @@ public struct ProfileView: View {
                                 .foregroundColor(.secondary)
                         }
                         Spacer()
+                        
+                        Button(action: { isCSVImporterPresented = true }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "square.and.arrow.down.fill")
+                                Text("Import IMDb CSV")
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(LinearGradient(colors: [.yellow, .orange], startPoint: .leading, endPoint: .trailing))
+                            .foregroundColor(.black)
+                            .cornerRadius(12)
+                            .shadow(color: .orange.opacity(0.4), radius: 6)
+                        }
                     }
                     .padding()
                 }
@@ -116,7 +139,7 @@ public struct ProfileView: View {
                 }
                 .padding(.horizontal)
                 
-                // Cast & Director Stats (Threshold >= 4)
+                // Cast & Director Stats
                 TopStatsView(topActors: stats.topActors, topDirectors: stats.topDirectors)
                 
                 // Active Selected Category Collection Grid
@@ -164,20 +187,40 @@ public struct ProfileView: View {
                                     }
                                 }) {
                                     VStack(alignment: .leading, spacing: 8) {
-                                        if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
-                                            AsyncImage(url: url) { img in
-                                                img.resizable().aspectRatio(contentMode: .fill)
-                                            } placeholder: {
-                                                Rectangle().fill(Color.gray.opacity(0.3))
-                                            }
-                                            .frame(height: 220)
-                                            .cornerRadius(12)
-                                            .clipped()
-                                        } else {
-                                            Rectangle()
-                                                .fill(Color.gray.opacity(0.3))
+                                        ZStack(alignment: .topTrailing) {
+                                            if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
+                                                AsyncImage(url: url) { img in
+                                                    img.resizable().aspectRatio(contentMode: .fill)
+                                                } placeholder: {
+                                                    Rectangle().fill(Color.gray.opacity(0.3))
+                                                }
                                                 .frame(height: 220)
                                                 .cornerRadius(12)
+                                                .clipped()
+                                            } else {
+                                                Rectangle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .frame(height: 220)
+                                                    .cornerRadius(12)
+                                            }
+                                            
+                                            // User Rating Badge
+                                            if let rating = item.userRating, rating > 0 {
+                                                HStack(spacing: 2) {
+                                                    Image(systemName: "star.fill")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(.yellow)
+                                                    Text(String(format: "%.0f", rating))
+                                                        .font(.caption2)
+                                                        .fontWeight(.black)
+                                                        .foregroundColor(.white)
+                                                }
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(Color.black.opacity(0.85))
+                                                .cornerRadius(6)
+                                                .padding(6)
+                                            }
                                         }
                                         
                                         Text(item.title)
@@ -193,6 +236,102 @@ public struct ProfileView: View {
                 }
             }
             .padding(.vertical)
+        }
+        .fileImporter(
+            isPresented: $isCSVImporterPresented,
+            allowedContentTypes: [.commaSeparatedText, .plainText, .data],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                guard url.startAccessingSecurityScopedResource() else { return }
+                defer { url.stopAccessingSecurityScopedResource() }
+                
+                if let content = try? String(contentsOf: url) {
+                    isImporting = true
+                    Task {
+                        let res = await IMDbCSVImporter.shared.importCSVData(content) { current, total, title in
+                            DispatchQueue.main.async {
+                                self.importCurrent = current
+                                self.importTotal = total
+                                self.importProgressMessage = "Importing (\(current)/\(total)): \(title)"
+                            }
+                        }
+                        DispatchQueue.main.async {
+                            self.importSummary = res
+                        }
+                    }
+                }
+            case .failure(let error):
+                print("CSV Import error: \(error)")
+            }
+        }
+        .sheet(isPresented: $isImporting) {
+            VStack(spacing: 20) {
+                if let summary = importSummary {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 64))
+                        .foregroundColor(.green)
+                    
+                    Text("IMDb Ratings Import Complete!")
+                        .font(.title2)
+                        .fontWeight(.black)
+                    
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("🎬 Watched Movies:")
+                            Spacer()
+                            Text("\(summary.importedMovies)")
+                                .fontWeight(.bold)
+                        }
+                        HStack {
+                            Text("📺 Watched TV Shows:")
+                            Spacer()
+                            Text("\(summary.importedTVShows)")
+                                .fontWeight(.bold)
+                        }
+                        if summary.failedCount > 0 {
+                            HStack {
+                                Text("⚠️ Unresolved Items:")
+                                Spacer()
+                                Text("\(summary.failedCount)")
+                                    .foregroundColor(.orange)
+                            }
+                        }
+                    }
+                    .padding()
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(14)
+                    
+                    Button("Done") {
+                        self.isImporting = false
+                        self.importSummary = nil
+                    }
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 30)
+                    .padding(.vertical, 12)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+                } else {
+                    ProgressView()
+                        .scaleEffect(1.4)
+                    
+                    Text(importProgressMessage.isEmpty ? "Preparing IMDb CSV..." : importProgressMessage)
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                    
+                    if importTotal > 0 {
+                        ProgressView(value: Double(importCurrent), total: Double(importTotal))
+                            .padding(.horizontal, 40)
+                    }
+                }
+            }
+            .padding(32)
+            .background(Color.black.edgesIgnoringSafeArea(.all))
         }
     }
 }

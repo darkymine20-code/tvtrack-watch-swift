@@ -97,6 +97,45 @@ public final class TMDbService: ObservableObject {
         return try JSONDecoder().decode(TMDbCredits.self, from: data)
     }
     
+    public func fetchByIMDbId(imdbId: String) async throws -> TMDbMediaItem? {
+        let urlString = "\(AppConfig.tmdbBaseURL)/find/\(imdbId)?api_key=\(apiKey)&external_source=imdb_id"
+        guard let url = URL(string: urlString) else { return nil }
+        let (data, _) = try await session.data(from: url)
+        let response = try JSONDecoder().decode(TMDbFindResponse.self, from: data)
+        if let movie = response.movieResults?.first {
+            return TMDbMediaItem(
+                id: movie.id,
+                title: movie.title,
+                name: movie.name,
+                overview: movie.overview,
+                posterPath: movie.posterPath,
+                backdropPath: movie.backdropPath,
+                voteAverage: movie.voteAverage,
+                voteCount: movie.voteCount,
+                releaseDate: movie.releaseDate,
+                firstAirDate: movie.firstAirDate,
+                mediaType: "movie",
+                genreIds: movie.genreIds
+            )
+        } else if let tv = response.tvResults?.first {
+            return TMDbMediaItem(
+                id: tv.id,
+                title: tv.title,
+                name: tv.name,
+                overview: tv.overview,
+                posterPath: tv.posterPath,
+                backdropPath: tv.backdropPath,
+                voteAverage: tv.voteAverage,
+                voteCount: tv.voteCount,
+                releaseDate: tv.releaseDate,
+                firstAirDate: tv.firstAirDate,
+                mediaType: "tv",
+                genreIds: tv.genreIds
+            )
+        }
+        return nil
+    }
+    
     public func fetchSeasonDetails(tvId: Int, seasonNumber: Int) async throws -> TMDbSeasonDetails {
         let urlString = "\(AppConfig.tmdbBaseURL)/tv/\(tvId)/season/\(seasonNumber)?api_key=\(apiKey)"
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }

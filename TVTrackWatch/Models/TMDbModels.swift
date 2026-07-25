@@ -66,6 +66,16 @@ public struct TMDbResponse<T: Codable>: Codable {
     }
 }
 
+public struct TMDbFindResponse: Codable {
+    public let movieResults: [TMDbMediaItem]?
+    public let tvResults: [TMDbMediaItem]?
+    
+    enum CodingKeys: String, CodingKey {
+        case movieResults = "movie_results"
+        case tvResults = "tv_results"
+    }
+}
+
 // MARK: - Detailed Movie & TV Response
 public struct TMDbMovieDetails: Codable, Identifiable {
     public let id: Int
