@@ -339,14 +339,19 @@ public struct TVShowDetailsView: View {
                 self.credits = det.credits
                 loadSeasonEpisodes(seasonNumber: 1)
                 
-                let resolvedImdbId = det.externalIds?.imdbId ?? (await tmdbService.fetchIMDbId(mediaType: "tv", id: show.id)) ?? "tt\(show.id)"
+                var resolvedId = det.externalIds?.imdbId
+                if resolvedId == nil || resolvedId!.isEmpty {
+                    resolvedId = await tmdbService.fetchIMDbId(mediaType: "tv", id: show.id)
+                }
+                let finalImdbId = resolvedId ?? "tt\(show.id)"
+                
                 self.imdbInfo = await imdbService.fetchIMDbInfo(
-                    imdbId: resolvedImdbId,
+                    imdbId: finalImdbId,
                     defaultRating: show.voteAverage,
                     defaultVoteCount: show.voteCount
                 )
-                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: resolvedImdbId, limit: 50)
-                let freshTrakt = await traktService.fetchShowComments(tmdbId: show.id, imdbId: resolvedImdbId)
+                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: finalImdbId, limit: 50)
+                let freshTrakt = await traktService.fetchShowComments(tmdbId: show.id, imdbId: finalImdbId)
                 if !freshTrakt.isEmpty {
                     self.traktComments = freshTrakt
                 }

@@ -329,14 +329,19 @@ public struct MovieDetailsView: View {
                 self.details = det
                 self.credits = det.credits
                 
-                let resolvedImdbId = det.imdbId ?? (await tmdbService.fetchIMDbId(mediaType: "movie", id: movie.id)) ?? "tt\(movie.id)"
+                var resolvedId = det.imdbId
+                if resolvedId == nil || resolvedId!.isEmpty {
+                    resolvedId = await tmdbService.fetchIMDbId(mediaType: "movie", id: movie.id)
+                }
+                let finalImdbId = resolvedId ?? "tt\(movie.id)"
+                
                 self.imdbInfo = await imdbService.fetchIMDbInfo(
-                    imdbId: resolvedImdbId,
+                    imdbId: finalImdbId,
                     defaultRating: movie.voteAverage,
                     defaultVoteCount: movie.voteCount
                 )
-                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: resolvedImdbId, limit: 50)
-                let freshTrakt = await traktService.fetchMovieComments(tmdbId: movie.id, imdbId: resolvedImdbId)
+                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: finalImdbId, limit: 50)
+                let freshTrakt = await traktService.fetchMovieComments(tmdbId: movie.id, imdbId: finalImdbId)
                 if !freshTrakt.isEmpty {
                     self.traktComments = freshTrakt
                 }
