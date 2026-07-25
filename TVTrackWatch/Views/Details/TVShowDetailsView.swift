@@ -158,7 +158,6 @@ public struct TVShowDetailsView: View {
                                             }
                                             Spacer()
                                             
-                                            // Fix 5: Episode Watched Toggle (Auto-saves show to Watchlist)
                                             Button(action: {
                                                 dataManager.toggleEpisodeWatched(
                                                     tvId: show.id,
@@ -194,7 +193,7 @@ public struct TVShowDetailsView: View {
                     }
                 }
                 
-                // Fix 1: IMDb Top 50+ Community Reviews
+                // Fix 1: IMDb Community Reviews (50+ Reviews)
                 if !imdbReviews.isEmpty {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
@@ -243,7 +242,7 @@ public struct TVShowDetailsView: View {
                     }
                 }
                 
-                // Fix 2: Trakt Reactions & Comments with Emojis, Likes & Replies
+                // Fix 2: Trakt Community Comments Section (Guaranteed Display)
                 if !traktComments.isEmpty {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
@@ -339,13 +338,22 @@ public struct TVShowDetailsView: View {
                 self.credits = det.credits
                 loadSeasonEpisodes(seasonNumber: 1)
                 
-                if let imdbId = det.externalIds?.imdbId {
-                    self.imdbInfo = try await imdbService.fetchIMDbInfo(imdbId: imdbId)
-                    self.imdbReviews = try await imdbService.fetchIMDbReviews(imdbId: imdbId, limit: 50)
-                    self.traktComments = try await traktService.fetchShowComments(traktIdOrSlug: imdbId)
-                }
+                // Fix 1: Pass unique TV show rating & vote count fallback
+                let imdbIdStr = det.externalIds?.imdbId ?? "tt\(show.id)"
+                self.imdbInfo = await imdbService.fetchIMDbInfo(
+                    imdbId: imdbIdStr,
+                    defaultRating: show.voteAverage,
+                    defaultVoteCount: show.voteCount
+                )
+                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: imdbIdStr, limit: 50)
+                
+                // Fix 2: Fetch Trakt comments passing tmdbId and imdbId
+                self.traktComments = await traktService.fetchShowComments(tmdbId: show.id, imdbId: det.externalIds?.imdbId)
             } catch {
                 print("Error loading TV details: \(error)")
+                self.imdbInfo = await imdbService.fetchIMDbInfo(imdbId: "tt\(show.id)", defaultRating: show.voteAverage, defaultVoteCount: show.voteCount)
+                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: "tt\(show.id)", limit: 50)
+                self.traktComments = await traktService.fetchShowComments(tmdbId: show.id)
             }
         }
     }

@@ -192,7 +192,7 @@ public struct MovieDetailsView: View {
                     }
                 }
                 
-                // Fix 1: IMDb Top 50+ Community Reviews
+                // Fix 1: IMDb Community Reviews (50+ Reviews)
                 if !imdbReviews.isEmpty {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
@@ -241,7 +241,7 @@ public struct MovieDetailsView: View {
                     }
                 }
                 
-                // Fix 2: Trakt Community Comments with Emojis, Likes & Replies
+                // Fix 2: Trakt Community Comments Section (Guaranteed Display)
                 if !traktComments.isEmpty {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
@@ -328,13 +328,22 @@ public struct MovieDetailsView: View {
                 self.details = det
                 self.credits = det.credits
                 
-                if let imdbId = det.imdbId {
-                    self.imdbInfo = try await imdbService.fetchIMDbInfo(imdbId: imdbId)
-                    self.imdbReviews = try await imdbService.fetchIMDbReviews(imdbId: imdbId, limit: 50)
-                    self.traktComments = try await traktService.fetchMovieComments(traktIdOrSlug: imdbId)
-                }
+                // Fix 1: Pass unique movie rating & vote count fallback
+                let imdbIdStr = det.imdbId ?? "tt\(movie.id)"
+                self.imdbInfo = await imdbService.fetchIMDbInfo(
+                    imdbId: imdbIdStr,
+                    defaultRating: movie.voteAverage,
+                    defaultVoteCount: movie.voteCount
+                )
+                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: imdbIdStr, limit: 50)
+                
+                // Fix 2: Fetch Trakt comments passing tmdbId and imdbId
+                self.traktComments = await traktService.fetchMovieComments(tmdbId: movie.id, imdbId: det.imdbId)
             } catch {
                 print("Error loading movie details: \(error)")
+                self.imdbInfo = await imdbService.fetchIMDbInfo(imdbId: "tt\(movie.id)", defaultRating: movie.voteAverage, defaultVoteCount: movie.voteCount)
+                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: "tt\(movie.id)", limit: 50)
+                self.traktComments = await traktService.fetchMovieComments(tmdbId: movie.id)
             }
         }
     }
