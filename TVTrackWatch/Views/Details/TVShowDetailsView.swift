@@ -111,190 +111,83 @@ public struct TVShowDetailsView: View {
                 }
                 .padding(.horizontal)
                 
-                // Overview
+                // Overview / Synopsis
                 if let overview = details?.overview ?? show.overview, !overview.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Synopsis")
-                            .font(.title3).fontWeight(.black)
+                            .font(.title2).fontWeight(.bold)
                         Text(overview)
                             .font(.body)
                             .foregroundColor(.secondary)
+                            .lineSpacing(4)
                     }
                     .padding(.horizontal)
                 }
                 
-                // Season Selector & Restored Original Episode List Layout
-                if let seasons = details?.seasons, !seasons.isEmpty {
-                    VStack(alignment: .leading, spacing: 18) {
-                        HStack {
-                            Text("Seasons & Episodes")
-                                .font(.title2).fontWeight(.black)
-                            Spacer()
-                        }
-                        .padding(.horizontal)
+                // ORIGINAL INITIAL DESIGN: Dropdown Season Menu & EpisodeCardView List
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text("Episodes")
+                            .font(.title2).fontWeight(.bold)
+                        Spacer()
                         
-                        // Season Pill Selector
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
+                        // Original Dropdown Menu for Season Selection
+                        Menu {
+                            if let seasons = details?.seasons {
                                 ForEach(seasons.filter { $0.seasonNumber > 0 }) { season in
-                                    Button(action: {
+                                    Button("Season \(season.seasonNumber)") {
                                         selectedSeason = season.seasonNumber
                                         loadSeasonEpisodes(seasonNumber: season.seasonNumber)
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            Text("Season \(season.seasonNumber)")
-                                                .font(.subheadline)
-                                                .fontWeight(.bold)
-                                            if let count = season.episodeCount {
-                                                Text("(\(count))")
-                                                    .font(.caption)
-                                                    .opacity(0.8)
-                                            }
-                                        }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 10)
-                                        .background(selectedSeason == season.seasonNumber ? Color.blue : Color.white.opacity(0.08))
-                                        .foregroundColor(.white)
-                                        .cornerRadius(12)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(selectedSeason == season.seasonNumber ? Color.cyan : Color.white.opacity(0.15), lineWidth: 1)
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text("Season \(selectedSeason)")
+                                    .fontWeight(.bold)
+                                Image(systemName: "chevron.down")
+                            }
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(Color.white.opacity(0.15))
+                            .foregroundColor(.white)
+                            .cornerRadius(10)
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    // Original EpisodeCardView List
+                    if let episodes = seasonDetails?.episodes {
+                        VStack(spacing: 12) {
+                            ForEach(episodes) { ep in
+                                let epKey = "\(selectedSeason)_\(ep.episodeNumber)"
+                                let isEpWatched = localItem?.watchedEpisodes[epKey] != nil
+                                
+                                EpisodeCardView(
+                                    episode: ep,
+                                    isWatched: isEpWatched,
+                                    onToggleWatched: {
+                                        dataManager.toggleEpisodeWatched(
+                                            tvId: show.id,
+                                            season: selectedSeason,
+                                            episode: ep.episodeNumber,
+                                            showTitle: show.displayTitle,
+                                            posterPath: show.posterPath,
+                                            backdropPath: show.backdropPath,
+                                            voteAverage: show.voteAverage,
+                                            releaseDate: show.releaseDate
                                         )
+                                    },
+                                    onPlay: {
+                                        activeEpisode = (selectedSeason, ep.episodeNumber)
+                                        isPlayerPresented = true
                                     }
-                                }
+                                )
                             }
+                        }
+                        .padding(.horizontal)
+                    } else {
+                        ProgressView()
                             .padding(.horizontal)
-                        }
-                        
-                        // Restored Original Episode Card List Layout
-                        if let episodes = seasonDetails?.episodes {
-                            LazyVStack(spacing: 16) {
-                                ForEach(episodes) { ep in
-                                    let isWatched = localItem?.watchedEpisodes["\(selectedSeason)_\(ep.episodeNumber)"] != nil
-                                    
-                                    GlassCardView {
-                                        HStack(alignment: .top, spacing: 16) {
-                                            // 16:9 Episode Still Thumbnail
-                                            if let stillURL = ep.stillURL {
-                                                AsyncImage(url: stillURL) { img in
-                                                    img.resizable().aspectRatio(contentMode: .fill)
-                                                } placeholder: {
-                                                    Rectangle().fill(Color.gray.opacity(0.3))
-                                                }
-                                                .frame(width: 160, height: 95)
-                                                .cornerRadius(12)
-                                                .clipped()
-                                            } else {
-                                                Rectangle()
-                                                    .fill(Color.gray.opacity(0.3))
-                                                    .frame(width: 160, height: 95)
-                                                    .cornerRadius(12)
-                                            }
-                                            
-                                            VStack(alignment: .leading, spacing: 6) {
-                                                HStack {
-                                                    Text("Episode \(ep.episodeNumber)")
-                                                        .font(.caption)
-                                                        .fontWeight(.black)
-                                                        .padding(.horizontal, 8)
-                                                        .padding(.vertical, 4)
-                                                        .background(Color.blue)
-                                                        .foregroundColor(.white)
-                                                        .cornerRadius(6)
-                                                    
-                                                    Text(ep.name)
-                                                        .font(.headline)
-                                                        .fontWeight(.bold)
-                                                        .foregroundColor(.white)
-                                                        .lineLimit(1)
-                                                    
-                                                    Spacer()
-                                                    
-                                                    if let rating = ep.voteAverage, rating > 0 {
-                                                        HStack(spacing: 3) {
-                                                            Image(systemName: "star.fill")
-                                                                .font(.caption2)
-                                                                .foregroundColor(.yellow)
-                                                            Text(String(format: "%.1f", rating))
-                                                                .font(.caption)
-                                                                .fontWeight(.bold)
-                                                                .foregroundColor(.yellow)
-                                                        }
-                                                    }
-                                                }
-                                                
-                                                if let overview = ep.overview, !overview.isEmpty {
-                                                    Text(overview)
-                                                        .font(.subheadline)
-                                                        .foregroundColor(.secondary)
-                                                        .lineLimit(3)
-                                                }
-                                                
-                                                HStack(spacing: 16) {
-                                                    if let airDate = ep.airDate, !airDate.isEmpty {
-                                                        HStack(spacing: 4) {
-                                                            Image(systemName: "calendar")
-                                                                .font(.caption2)
-                                                            Text(airDate)
-                                                                .font(.caption)
-                                                        }
-                                                        .foregroundColor(.gray)
-                                                    }
-                                                    
-                                                    Spacer()
-                                                    
-                                                    // Mark Watched Toggle Button
-                                                    Button(action: {
-                                                        dataManager.toggleEpisodeWatched(
-                                                            tvId: show.id,
-                                                            season: selectedSeason,
-                                                            episode: ep.episodeNumber,
-                                                            showTitle: show.displayTitle,
-                                                            posterPath: show.posterPath,
-                                                            backdropPath: show.backdropPath,
-                                                            voteAverage: show.voteAverage,
-                                                            releaseDate: show.releaseDate
-                                                        )
-                                                    }) {
-                                                        HStack(spacing: 6) {
-                                                            Image(systemName: isWatched ? "checkmark.circle.fill" : "circle")
-                                                            Text(isWatched ? "Watched" : "Mark Watched")
-                                                        }
-                                                        .font(.caption)
-                                                        .fontWeight(.bold)
-                                                        .padding(.horizontal, 10)
-                                                        .padding(.vertical, 6)
-                                                        .background(isWatched ? Color.green.opacity(0.3) : Color.white.opacity(0.1))
-                                                        .foregroundColor(isWatched ? .green : .white)
-                                                        .cornerRadius(8)
-                                                    }
-                                                    
-                                                    // Play Episode Button
-                                                    Button(action: {
-                                                        activeEpisode = (selectedSeason, ep.episodeNumber)
-                                                        isPlayerPresented = true
-                                                    }) {
-                                                        HStack(spacing: 6) {
-                                                            Image(systemName: "play.fill")
-                                                            Text("Play")
-                                                        }
-                                                        .font(.caption)
-                                                        .fontWeight(.bold)
-                                                        .padding(.horizontal, 12)
-                                                        .padding(.vertical, 6)
-                                                        .background(LinearGradient(colors: [.blue, .cyan], startPoint: .leading, endPoint: .trailing))
-                                                        .foregroundColor(.white)
-                                                        .cornerRadius(8)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        .padding()
-                                    }
-                                    .padding(.horizontal)
-                                }
-                            }
-                        }
                     }
                 }
                 
