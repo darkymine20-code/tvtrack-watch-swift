@@ -42,8 +42,12 @@ public struct FilterSheetView: View {
                 }
                 
                 Section(header: Text("Release Year")) {
-                    TextField("e.g. 2026", text: $selectedYear)
-                        .keyboardType(.numberPad)
+                    let field = TextField("e.g. 2026", text: $selectedYear)
+                    #if os(iOS)
+                    field.keyboardType(.numberPad)
+                    #else
+                    field
+                    #endif
                 }
                 
                 Section(header: Text("Minimum Rating")) {

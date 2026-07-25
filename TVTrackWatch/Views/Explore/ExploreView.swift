@@ -28,8 +28,8 @@ public struct ExploreView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
                     TextField("Search movies, TV shows, actors...", text: $searchQuery)
-                        .onChange(of: searchQuery) { newValue in
-                            performSearch(query: newValue)
+                        .onChange(of: searchQuery) {
+                            performSearch(query: searchQuery)
                         }
                     if !searchQuery.isEmpty {
                         Button(action: { searchQuery = "" }) {
@@ -179,66 +179,6 @@ public struct ExploreView: View {
             } catch {
                 print("Error loading explore data: \(error)")
             }
-        }
-    }
-}
-
-struct MediaCardCell: View {
-    let item: TMDbMediaItem
-    
-    var body: some View {
-        Group {
-            if item.mediaType == "tv" {
-                NavigationLink(destination: TVShowDetailsView(show: item)) {
-                    cardBody
-                }
-            } else {
-                NavigationLink(destination: MovieDetailsView(movie: item)) {
-                    cardBody
-                }
-            }
-        }
-    }
-    
-    private var cardBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let posterURL = item.posterURL {
-                AsyncImage(url: posterURL) { img in
-                    img.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle().fill(Color.gray.opacity(0.3))
-                }
-                .frame(height: 220)
-                .cornerRadius(10)
-                .clipped()
-            } else {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(height: 220)
-                    .cornerRadius(10)
-            }
-            
-            Text(item.displayTitle)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .lineLimit(1)
-        }
-    }
-}
-
-struct MediaCarouselHorizontal: View {
-    let items: [TMDbMediaItem]
-    
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 16) {
-                ForEach(items) { item in
-                    MediaCardCell(item: item)
-                        .frame(width: 140)
-                }
-            }
-            .padding(.horizontal)
         }
     }
 }

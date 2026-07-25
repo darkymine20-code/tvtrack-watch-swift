@@ -1,6 +1,9 @@
 import SwiftUI
 import WebKit
 
+#if canImport(UIKit)
+import UIKit
+
 public struct WebViewWrapper: UIViewRepresentable {
     public let url: URL
     
@@ -11,10 +14,8 @@ public struct WebViewWrapper: UIViewRepresentable {
     public func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
-        config.mediaTypesRequiringUserActionForPlayback = []
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.backgroundColor = .black
-        webView.isOpaque = false
         webView.load(URLRequest(url: url))
         return webView
     }
@@ -25,6 +26,30 @@ public struct WebViewWrapper: UIViewRepresentable {
         }
     }
 }
+#elseif canImport(AppKit)
+import AppKit
+
+public struct WebViewWrapper: NSViewRepresentable {
+    public let url: URL
+    
+    public init(url: URL) {
+        self.url = url
+    }
+    
+    public func makeNSView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.load(URLRequest(url: url))
+        return webView
+    }
+    
+    public func updateNSView(_ nsView: WKWebView, context: Context) {
+        if nsView.url != url {
+            nsView.load(URLRequest(url: url))
+        }
+    }
+}
+#endif
 
 public struct VideoPlayerView: View {
     @ObservedObject var streamingEngine = StreamingEngine.shared
@@ -110,7 +135,7 @@ public struct VideoPlayerView: View {
             // Streaming WebView Player
             if let url = currentStreamURL {
                 WebViewWrapper(url: url)
-                    .edgesIgnoringSafeArea(.bottom)
+                    .ignoresSafeArea()
             } else {
                 VStack {
                     Spacer()
