@@ -38,6 +38,7 @@ public struct ProfileView: View {
             case .stoppedWatching: return .orange
             }
         }
+        public var title: String { rawValue }
     }
     
     public init() {}
@@ -80,6 +81,25 @@ public struct ProfileView: View {
         WatchlistCategorizer.calculateTopStats(items: allItems, minThreshold: 1)
     }
     
+    @ViewBuilder
+    private func detailsView(for item: LocalMediaItem) -> some View {
+        if item.mediaType == "tv" {
+            TVShowDetailsView(show: TMDbMediaItem(
+                id: item.tmdbId, title: nil, name: item.title, overview: nil,
+                posterPath: item.posterPath, backdropPath: item.backdropPath,
+                voteAverage: item.voteAverage, voteCount: nil, releaseDate: nil,
+                firstAirDate: item.releaseDate, mediaType: "tv", genreIds: nil
+            ))
+        } else {
+            MovieDetailsView(movie: TMDbMediaItem(
+                id: item.tmdbId, title: item.title, name: nil, overview: nil,
+                posterPath: item.posterPath, backdropPath: item.backdropPath,
+                voteAverage: item.voteAverage, voteCount: nil, releaseDate: item.releaseDate,
+                firstAirDate: nil, mediaType: "movie", genreIds: nil
+            ))
+        }
+    }
+    
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -100,7 +120,7 @@ public struct ProfileView: View {
                         }
                         Spacer()
                         
-                        Button(action: { isCSVImporterPresented = true }) {
+                        Button(action: { isImportOptionsPresented = true }) {
                             HStack(spacing: 8) {
                                 Image(systemName: "square.and.arrow.down.fill")
                                 Text("Import IMDb CSV")
@@ -112,121 +132,206 @@ public struct ProfileView: View {
                             .background(LinearGradient(colors: [.yellow, .orange], startPoint: .leading, endPoint: .trailing))
                             .foregroundColor(.black)
                             .cornerRadius(12)
-                            .shadow(color: .orange.opacity(0.4), radius: 6)
+                            .shadow(color: .orange.opacity(0.4), radius: 4)
+                        }
+                        .confirmationDialog("Import IMDb Data", isPresented: $isImportOptionsPresented, titleVisibility: .visible) {
+                            Button("📁 Choose CSV File from Files App") {
+                                isCSVImporterPresented = true
+                            }
+                            Button("📋 Paste CSV Text from Clipboard") {
+                                pastedCSVText = UIPasteboard.general.string ?? ""
+                                isPasteSheetPresented = true
+                            }
+                            Button("Cancel", role: .cancel) {}
                         }
                     }
                     .padding()
                 }
                 .padding(.horizontal)
                 
-                // Dashboard Counters Grid (Clickable Category Filters)
-                HStack(spacing: 12) {
-                    CounterCardView(filter: .watchedMovies, count: watchedMovies.count, isSelected: selectedFilter == .watchedMovies) {
-                        selectedFilter = .watchedMovies
-                    }
-                    CounterCardView(filter: .watchedTV, count: watchedTV.count, isSelected: selectedFilter == .watchedTV) {
-                        selectedFilter = .watchedTV
-                    }
-                    CounterCardView(filter: .favoriteMovies, count: favoriteMovies.count, isSelected: selectedFilter == .favoriteMovies) {
-                        selectedFilter = .favoriteMovies
-                    }
-                    CounterCardView(filter: .favoriteTV, count: favoriteTV.count, isSelected: selectedFilter == .favoriteTV) {
-                        selectedFilter = .favoriteTV
-                    }
-                    CounterCardView(filter: .stoppedWatching, count: stoppedWatchingArchive.count, isSelected: selectedFilter == .stoppedWatching) {
-                        selectedFilter = .stoppedWatching
-                    }
-                }
-                .padding(.horizontal)
-                
-                // Cast & Director Stats
-                TopStatsView(topActors: stats.topActors, topDirectors: stats.topDirectors)
-                
-                // Active Selected Category Collection Grid
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Image(systemName: selectedFilter.icon)
-                            .foregroundColor(selectedFilter.color)
-                            .font(.title2)
-                        Text("\(selectedFilter.rawValue) (\(currentFilteredItems.count))")
-                            .font(.title2).fontWeight(.black)
-                        Spacer()
+                // Dashboard Overview
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Dashboard Overview")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
+                    
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        ProfileStatCard(title: "Watched Movies", count: watchedMovies.count, icon: "film.fill", color: .purple, isSelected: selectedFilter == .watchedMovies) {
+                            selectedFilter = .watchedMovies
+                        }
+                        
+                        ProfileStatCard(title: "Watched TV Shows", count: watchedTV.count, icon: "tv.fill", color: .blue, isSelected: selectedFilter == .watchedTV) {
+                            selectedFilter = .watchedTV
+                        }
+                        
+                        ProfileStatCard(title: "Favorite Movies", count: favoriteMovies.count, icon: "heart.fill", color: .pink, isSelected: selectedFilter == .favoriteMovies) {
+                            selectedFilter = .favoriteMovies
+                        }
+                        
+                        ProfileStatCard(title: "Favorite TV Shows", count: favoriteTV.count, icon: "star.fill", color: .yellow, isSelected: selectedFilter == .favoriteTV) {
+                            selectedFilter = .favoriteTV
+                        }
                     }
                     .padding(.horizontal)
                     
-                    if currentFilteredItems.isEmpty {
-                        GlassCardView {
-                            VStack(spacing: 8) {
-                                Image(systemName: "tray")
-                                    .font(.largeTitle).foregroundColor(.gray)
-                                Text("No items in \(selectedFilter.rawValue).")
-                                    .font(.headline).foregroundColor(.gray)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
+                    // Stopped Watching Filter Card
+                    GlassCardView {
+                        HStack {
+                            Image(systemName: "hand.raised.slash.fill")
+                                .foregroundColor(.red)
+                                .font(.title3)
+                            Text("Stopped Watching Archive")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(stoppedWatchingArchive.count) items")
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.red)
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedFilter = .stoppedWatching
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // Actor & Director Stats Section
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Cast & Crew Breakdown")
+                        .font(.title2)
+                        .fontWeight(.bold)
                         .padding(.horizontal)
-                    } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 20)], spacing: 20) {
-                            ForEach(currentFilteredItems) { item in
-                                NavigationLink(destination: Group {
-                                    if item.mediaType == "tv" {
-                                        TVShowDetailsView(show: TMDbMediaItem(
-                                            id: item.tmdbId, title: nil, name: item.title, overview: nil,
-                                            posterPath: item.posterPath, backdropPath: item.backdropPath,
-                                            voteAverage: item.voteAverage, voteCount: nil, releaseDate: nil,
-                                            firstAirDate: item.releaseDate, mediaType: "tv", genreIds: nil
-                                        ))
-                                    } else {
-                                        MovieDetailsView(movie: TMDbMediaItem(
-                                            id: item.tmdbId, title: item.title, name: nil, overview: nil,
-                                            posterPath: item.posterPath, backdropPath: item.backdropPath,
-                                            voteAverage: item.voteAverage, voteCount: nil, releaseDate: item.releaseDate,
-                                            firstAirDate: nil, mediaType: "movie", genreIds: nil
-                                        ))
+                    
+                    HStack(alignment: .top, spacing: 20) {
+                        // Top Actors
+                        GlassCardView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "person.3.fill")
+                                        .foregroundColor(.cyan)
+                                    Text("Top Actors")
+                                        .font(.headline)
+                                }
+                                Divider()
+                                if stats.topActors.isEmpty {
+                                    Text("No actor stats available yet. View movie details to track top cast!")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                } else {
+                                    ForEach(stats.topActors) { actor in
+                                        HStack {
+                                            Text(actor.name)
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                            Spacer()
+                                            Text("\(actor.count) watched")
+                                                .font(.caption)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color.cyan.opacity(0.2))
+                                                .foregroundColor(.cyan)
+                                                .cornerRadius(8)
+                                        }
                                     }
-                                }) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        ZStack(alignment: .topTrailing) {
-                                            if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
-                                                AsyncImage(url: url) { img in
-                                                    img.resizable().aspectRatio(contentMode: .fill)
-                                                } placeholder: {
-                                                    Rectangle().fill(Color.gray.opacity(0.3))
-                                                }
+                                }
+                            }
+                        }
+                        
+                        // Top Directors
+                        GlassCardView {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Image(systemName: "video.fill")
+                                        .foregroundColor(.orange)
+                                    Text("Top Directors")
+                                        .font(.headline)
+                                }
+                                Divider()
+                                if stats.topDirectors.isEmpty {
+                                    Text("No director stats available yet. View movie details to track directors!")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                } else {
+                                    ForEach(stats.topDirectors) { director in
+                                        HStack {
+                                            Text(director.name)
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                            Spacer()
+                                            Text("\(director.count) watched")
+                                                .font(.caption)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color.orange.opacity(0.2))
+                                                .foregroundColor(.orange)
+                                                .cornerRadius(8)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // Filtered List View
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(selectedFilter.title)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
+                    
+                    if currentFilteredItems.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "tray")
+                                .font(.system(size: 48))
+                                .foregroundColor(.gray)
+                            Text("No items found in this section")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 16)], spacing: 16) {
+                            ForEach(currentFilteredItems) { item in
+                                NavigationLink(destination: detailsView(for: item)) {
+                                    ZStack(alignment: .topTrailing) {
+                                        if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
+                                            AsyncImage(url: url) { img in
+                                                img.resizable().aspectRatio(contentMode: .fill)
+                                            } placeholder: {
+                                                Rectangle().fill(Color.gray.opacity(0.3))
+                                            }
+                                            .frame(height: 220)
+                                            .cornerRadius(12)
+                                            .clipped()
+                                        } else {
+                                            Rectangle()
+                                                .fill(Color.gray.opacity(0.3))
                                                 .frame(height: 220)
                                                 .cornerRadius(12)
-                                                .clipped()
-                                            } else {
-                                                Rectangle()
-                                                    .fill(Color.gray.opacity(0.3))
-                                                    .frame(height: 220)
-                                                    .cornerRadius(12)
-                                            }
-                                            
-                                            // User Rating Badge
-                                            if let rating = item.userRating, rating > 0 {
-                                                HStack(spacing: 2) {
-                                                    Image(systemName: "star.fill")
-                                                        .font(.system(size: 10))
-                                                        .foregroundColor(.yellow)
-                                                    Text(String(format: "%.0f", rating))
-                                                        .font(.caption2)
-                                                        .fontWeight(.black)
-                                                        .foregroundColor(.white)
-                                                }
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 3)
-                                                .background(Color.black.opacity(0.85))
-                                                .cornerRadius(6)
-                                                .padding(6)
-                                            }
                                         }
                                         
-                                        Text(item.title)
-                                            .font(.caption).fontWeight(.bold)
-                                            .foregroundColor(.white)
-                                            .lineLimit(1)
+                                        // User Rating Badge
+                                        if let rating = item.userRating, rating > 0 {
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "star.fill")
+                                                    .font(.system(size: 10))
+                                                    .foregroundColor(.yellow)
+                                                Text(String(format: "%.0f", rating))
+                                                    .font(.caption2)
+                                                    .fontWeight(.black)
+                                                    .foregroundColor(.black)
+                                            }
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(Color.yellow)
+                                            .cornerRadius(8)
+                                            .padding(6)
+                                        }
                                     }
                                 }
                             }
@@ -239,36 +344,18 @@ public struct ProfileView: View {
         }
         .fileImporter(
             isPresented: $isCSVImporterPresented,
-            allowedContentTypes: [
-                UTType(filenameExtension: "csv") ?? .commaSeparatedText,
-                .commaSeparatedText,
-                .plainText,
-                .data,
-                .item,
-                .content
-            ],
+            allowedContentTypes: [.item],
             allowsMultipleSelection: false
         ) { result in
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
                 let accessing = url.startAccessingSecurityScopedResource()
-                defer {
-                    if accessing {
-                        url.stopAccessingSecurityScopedResource()
-                    }
-                }
+                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
                 
                 var content = ""
-                if let text = try? String(contentsOf: url, encoding: .utf8) {
-                    content = text
-                } else if let text = try? String(contentsOf: url, encoding: .ascii) {
-                    content = text
-                } else if let text = try? String(contentsOf: url, encoding: .isoLatin1) {
-                    content = text
-                } else if let text = try? String(contentsOf: url) {
-                    content = text
-                }
+                if let text = try? String(contentsOf: url, encoding: .utf8) { content = text }
+                else if let text = try? String(contentsOf: url, encoding: .ascii) { content = text }
                 
                 if !content.isEmpty {
                     isImporting = true
@@ -280,13 +367,88 @@ public struct ProfileView: View {
                                 self.importProgressMessage = "Importing (\(current)/\(total)): \(title)"
                             }
                         }
-                        DispatchQueue.main.async {
-                            self.importSummary = res
-                        }
+                        DispatchQueue.main.async { self.importSummary = res }
                     }
                 }
             case .failure(let error):
                 print("CSV Import error: \(error)")
+            }
+        }
+        .sheet(isPresented: $isPasteSheetPresented) {
+            NavigationView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Paste the content of your IMDb ratings.csv or watchlist.csv file below:")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    HStack {
+                        Button(action: {
+                            if let clip = UIPasteboard.general.string { pastedCSVText = clip }
+                        }) {
+                            HStack {
+                                Image(systemName: "doc.on.clipboard.fill")
+                                Text("Paste from Clipboard")
+                            }
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.blue.opacity(0.2))
+                            .foregroundColor(.blue)
+                            .cornerRadius(8)
+                        }
+                        Spacer()
+                        if !pastedCSVText.isEmpty {
+                            Button("Clear") { pastedCSVText = "" }
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    }
+                    
+                    TextEditor(text: $pastedCSVText)
+                        .font(.system(.body, design: .monospaced))
+                        .padding(8)
+                        .background(Color.white.opacity(0.05))
+                        .cornerRadius(10)
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                    
+                    Button(action: {
+                        let contentToImport = pastedCSVText
+                        isPasteSheetPresented = false
+                        pastedCSVText = ""
+                        isImporting = true
+                        Task {
+                            let res = await IMDbCSVImporter.shared.importCSVData(contentToImport) { current, total, title in
+                                DispatchQueue.main.async {
+                                    self.importCurrent = current
+                                    self.importTotal = total
+                                    self.importProgressMessage = "Importing (\(current)/\(total)): \(title)"
+                                }
+                            }
+                            DispatchQueue.main.async { self.importSummary = res }
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.down.doc.fill")
+                            Text("Start Importing CSV Data")
+                        }
+                        .fontWeight(.bold)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(pastedCSVText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.gray : Color.yellow)
+                        .foregroundColor(.black)
+                        .cornerRadius(12)
+                    }
+                    .disabled(pastedCSVText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .padding()
+                .navigationTitle("Import IMDb CSV Text")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { isPasteSheetPresented = false }
+                    }
+                }
             }
         }
         .sheet(isPresented: $isImporting) {
