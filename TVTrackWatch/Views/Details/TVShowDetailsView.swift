@@ -515,6 +515,10 @@ public struct TVShowDetailsView: View {
                 let det = try await tmdbService.fetchTVDetails(id: show.id)
                 self.details = det
                 self.credits = det.credits
+                
+                let castNames = det.credits?.cast.prefix(10).map { $0.name } ?? []
+                let directorNames = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
+                dataManager.updateCreditsInfo(tmdbId: show.id, mediaType: "tv", castNames: Array(castNames), directorNames: Array(directorNames))
                 loadSeasonEpisodes(seasonNumber: 1)
                 
                 var resolvedId = det.externalIds?.imdbId

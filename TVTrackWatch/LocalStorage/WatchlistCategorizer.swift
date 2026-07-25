@@ -42,9 +42,9 @@ public final class WatchlistCategorizer {
         return (watchNext, notWatched30Days, waitingForNewEpisodes, haveNotStarted)
     }
     
-    // MARK: - Cast & Director Stats (Threshold >= 4 items)
-    public static func calculateTopStats(items: [LocalMediaItem], minThreshold: Int = 4) -> (topActors: [PersonStat], topDirectors: [PersonStat]) {
-        let watchedItems = items.filter { $0.isWatched }
+    // MARK: - Cast & Director Stats
+    public static func calculateTopStats(items: [LocalMediaItem], minThreshold: Int = 1) -> (topActors: [PersonStat], topDirectors: [PersonStat]) {
+        let watchedItems = items.filter { $0.isWatched || !$0.watchedEpisodes.isEmpty || $0.isFavorite || $0.isWatchlist }
         
         var actorCounts: [String: Int] = [:]
         var directorCounts: [String: Int] = [:]

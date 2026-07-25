@@ -139,6 +139,23 @@ public final class DataManager: ObservableObject {
         saveToDisk()
     }
     
+    public func updateCreditsInfo(tmdbId: Int, mediaType: String, castNames: [String], directorNames: [String] = []) {
+        let key = "\(mediaType)_\(tmdbId)"
+        var current = items[key] ?? LocalMediaItem(
+            tmdbId: tmdbId,
+            mediaType: mediaType,
+            title: mediaType == "movie" ? "Movie" : "TV Show",
+            castNames: castNames,
+            directorNames: directorNames
+        )
+        current.castNames = castNames
+        if !directorNames.isEmpty {
+            current.directorNames = directorNames
+        }
+        items[key] = current
+        saveToDisk()
+    }
+    
     public func getLocalItem(tmdbId: Int, mediaType: String) -> LocalMediaItem? {
         return items["\(mediaType)_\(tmdbId)"]
     }

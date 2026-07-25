@@ -11,7 +11,7 @@ public struct TopStatsView: View {
     
     public var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Top Cast & Director Stats (Min. 4 Watched)")
+            Text("Top Cast & Director Stats")
                 .font(.title2).fontWeight(.bold)
                 .padding(.horizontal)
             
