@@ -7,7 +7,8 @@ public struct ProfileView: View {
     public enum ProfileFilter: String, CaseIterable, Identifiable {
         case watchedMovies = "Watched Movies"
         case watchedTV = "Watched TV Shows"
-        case favorites = "Favorites"
+        case favoriteMovies = "Favorite Movies"
+        case favoriteTV = "Favorite TV Shows"
         case stoppedWatching = "Stopped Watching Archive"
         
         public var id: String { rawValue }
@@ -15,7 +16,8 @@ public struct ProfileView: View {
             switch self {
             case .watchedMovies: return "film.fill"
             case .watchedTV: return "tv.fill"
-            case .favorites: return "heart.fill"
+            case .favoriteMovies: return "heart.fill"
+            case .favoriteTV: return "heart.circle.fill"
             case .stoppedWatching: return "archivebox.fill"
             }
         }
@@ -23,7 +25,8 @@ public struct ProfileView: View {
             switch self {
             case .watchedMovies: return .blue
             case .watchedTV: return .green
-            case .favorites: return .red
+            case .favoriteMovies: return .red
+            case .favoriteTV: return .pink
             case .stoppedWatching: return .orange
             }
         }
@@ -43,8 +46,12 @@ public struct ProfileView: View {
         allItems.filter { $0.mediaType == "tv" && $0.isWatched }
     }
     
-    private var favorites: [LocalMediaItem] {
-        allItems.filter { $0.isFavorite }
+    private var favoriteMovies: [LocalMediaItem] {
+        allItems.filter { $0.mediaType == "movie" && $0.isFavorite }
+    }
+    
+    private var favoriteTV: [LocalMediaItem] {
+        allItems.filter { $0.mediaType == "tv" && $0.isFavorite }
     }
     
     private var stoppedWatchingArchive: [LocalMediaItem] {
@@ -55,7 +62,8 @@ public struct ProfileView: View {
         switch selectedFilter {
         case .watchedMovies: return watchedMovies
         case .watchedTV: return watchedTV
-        case .favorites: return favorites
+        case .favoriteMovies: return favoriteMovies
+        case .favoriteTV: return favoriteTV
         case .stoppedWatching: return stoppedWatchingArchive
         }
     }
@@ -89,15 +97,18 @@ public struct ProfileView: View {
                 .padding(.horizontal)
                 
                 // Dashboard Counters Grid (Clickable Category Filters)
-                HStack(spacing: 16) {
+                HStack(spacing: 12) {
                     CounterCardView(filter: .watchedMovies, count: watchedMovies.count, isSelected: selectedFilter == .watchedMovies) {
                         selectedFilter = .watchedMovies
                     }
                     CounterCardView(filter: .watchedTV, count: watchedTV.count, isSelected: selectedFilter == .watchedTV) {
                         selectedFilter = .watchedTV
                     }
-                    CounterCardView(filter: .favorites, count: favorites.count, isSelected: selectedFilter == .favorites) {
-                        selectedFilter = .favorites
+                    CounterCardView(filter: .favoriteMovies, count: favoriteMovies.count, isSelected: selectedFilter == .favoriteMovies) {
+                        selectedFilter = .favoriteMovies
+                    }
+                    CounterCardView(filter: .favoriteTV, count: favoriteTV.count, isSelected: selectedFilter == .favoriteTV) {
+                        selectedFilter = .favoriteTV
                     }
                     CounterCardView(filter: .stoppedWatching, count: stoppedWatchingArchive.count, isSelected: selectedFilter == .stoppedWatching) {
                         selectedFilter = .stoppedWatching
