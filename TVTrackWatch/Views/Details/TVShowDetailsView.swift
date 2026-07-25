@@ -389,18 +389,19 @@ public struct TVShowDetailsView: View {
     
     private func openYouTubeTrailer(key: String) {
         #if os(iOS)
-        let appSchemes = [
+        let candidates = [
+            "youtube://www.youtube.com/watch?v=\(key)",
             "youtube://watch?v=\(key)",
-            "youtube://\(key)",
-            "vnd.youtube://\(key)"
+            "vnd.youtube://\(key)",
+            "youtube://\(key)"
         ]
-        for scheme in appSchemes {
+        for scheme in candidates {
             if let appURL = URL(string: scheme), UIApplication.shared.canOpenURL(appURL) {
                 UIApplication.shared.open(appURL, options: [:], completionHandler: nil)
                 return
             }
         }
-        if let directAppURL = URL(string: "youtube://watch?v=\(key)") {
+        if let directAppURL = URL(string: "youtube://www.youtube.com/watch?v=\(key)") {
             UIApplication.shared.open(directAppURL, options: [:]) { success in
                 if !success, let webURL = URL(string: "https://www.youtube.com/watch?v=\(key)") {
                     UIApplication.shared.open(webURL)
