@@ -28,3 +28,16 @@ jobs:
 
       - name: Run Unit Tests
         run: swift test -v
+
+      - name: Create IPA Package
+        run: |
+          mkdir -p Payload/TVTrackWatch.app
+          cp -R .build/debug/* Payload/TVTrackWatch.app/ 2>/dev/null || true
+          zip -r TVTrackWatch-iPadOS.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TVTrackWatch-iPadOS.ipa
+          path: TVTrackWatch-iPadOS.ipa
+          if-no-files-found: warn
