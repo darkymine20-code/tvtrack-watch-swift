@@ -124,7 +124,52 @@ public struct TVShowDetailsView: View {
                     .padding(.horizontal)
                 }
                 
-                // ORIGINAL INITIAL DESIGN: Dropdown Season Menu & EpisodeCardView List
+                // Cast Carousel for TV Shows
+                if let cast = credits?.cast, !cast.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Top Cast")
+                            .font(.title3).fontWeight(.black)
+                            .padding(.horizontal)
+                        
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 16) {
+                                ForEach(cast.prefix(15)) { member in
+                                    VStack(alignment: .center, spacing: 6) {
+                                        if let profileURL = member.profileURL {
+                                            AsyncImage(url: profileURL) { img in
+                                                img.resizable().aspectRatio(contentMode: .fill)
+                                            } placeholder: {
+                                                Circle().fill(Color.gray.opacity(0.3))
+                                            }
+                                            .frame(width: 70, height: 70)
+                                            .clipShape(Circle())
+                                        } else {
+                                            Circle()
+                                                .fill(Color.gray.opacity(0.3))
+                                                .frame(width: 70, height: 70)
+                                        }
+                                        
+                                        Text(member.name)
+                                            .font(.caption).fontWeight(.bold)
+                                            .lineLimit(1)
+                                            .foregroundColor(.white)
+                                        
+                                        if let character = member.character {
+                                            Text(character)
+                                                .font(.caption2)
+                                                .foregroundColor(.gray)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                    .frame(width: 90)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
+                    }
+                }
+                
+                // Dropdown Season Menu & EpisodeCardView List
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("Episodes")
