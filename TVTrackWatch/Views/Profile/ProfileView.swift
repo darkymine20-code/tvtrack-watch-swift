@@ -239,16 +239,38 @@ public struct ProfileView: View {
         }
         .fileImporter(
             isPresented: $isCSVImporterPresented,
-            allowedContentTypes: [.commaSeparatedText, .plainText, .data],
+            allowedContentTypes: [
+                UTType(filenameExtension: "csv") ?? .commaSeparatedText,
+                .commaSeparatedText,
+                .plainText,
+                .data,
+                .item,
+                .content
+            ],
             allowsMultipleSelection: false
         ) { result in
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
-                guard url.startAccessingSecurityScopedResource() else { return }
-                defer { url.stopAccessingSecurityScopedResource() }
+                let accessing = url.startAccessingSecurityScopedResource()
+                defer {
+                    if accessing {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                }
                 
-                if let content = try? String(contentsOf: url) {
+                var content = ""
+                if let text = try? String(contentsOf: url, encoding: .utf8) {
+                    content = text
+                } else if let text = try? String(contentsOf: url, encoding: .ascii) {
+                    content = text
+                } else if let text = try? String(contentsOf: url, encoding: .isoLatin1) {
+                    content = text
+                } else if let text = try? String(contentsOf: url) {
+                    content = text
+                }
+                
+                if !content.isEmpty {
                     isImporting = true
                     Task {
                         let res = await IMDbCSVImporter.shared.importCSVData(content) { current, total, title in
