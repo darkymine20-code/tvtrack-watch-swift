@@ -182,3 +182,71 @@ public struct ExploreView: View {
         }
     }
 }
+
+public struct MediaCardCell: View {
+    public let item: TMDbMediaItem
+    
+    public init(item: TMDbMediaItem) {
+        self.item = item
+    }
+    
+    public var body: some View {
+        Group {
+            if item.mediaType == "tv" {
+                NavigationLink(destination: TVShowDetailsView(show: item)) {
+                    cardBody
+                }
+            } else {
+                NavigationLink(destination: MovieDetailsView(movie: item)) {
+                    cardBody
+                }
+            }
+        }
+    }
+    
+    private var cardBody: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let posterURL = item.posterURL {
+                AsyncImage(url: posterURL) { img in
+                    img.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle().fill(Color.gray.opacity(0.3))
+                }
+                .frame(height: 220)
+                .cornerRadius(10)
+                .clipped()
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 220)
+                    .cornerRadius(10)
+            }
+            
+            Text(item.displayTitle)
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .lineLimit(1)
+        }
+    }
+}
+
+public struct MediaCarouselHorizontal: View {
+    public let items: [TMDbMediaItem]
+    
+    public init(items: [TMDbMediaItem]) {
+        self.items = items
+    }
+    
+    public var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 16) {
+                ForEach(items) { item in
+                    MediaCardCell(item: item)
+                        .frame(width: 140)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+}

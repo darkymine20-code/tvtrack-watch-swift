@@ -22,7 +22,7 @@ public struct FilterSheetView: View {
     ]
     
     public var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section(header: Text("Type")) {
                     Picker("Media Type", selection: $mediaType) {
@@ -61,16 +61,20 @@ public struct FilterSheetView: View {
                 }
             }
             .navigationTitle("Filter Catalog")
-            .navigationBarItems(
-                leading: Button("Reset") {
-                    selectedGenreId = nil
-                    selectedYear = ""
-                    minRating = 0.0
-                },
-                trailing: Button("Apply") {
-                    dismiss()
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Reset") {
+                        selectedGenreId = nil
+                        selectedYear = ""
+                        minRating = 0.0
+                    }
                 }
-            )
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Apply") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
