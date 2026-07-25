@@ -193,7 +193,7 @@ public struct TVShowDetailsView: View {
                     }
                 }
                 
-                // Fix 1: IMDb Community Reviews (50+ Reviews)
+                // IMDb Community Reviews (50+ Reviews)
                 if !imdbReviews.isEmpty {
                     VStack(alignment: .leading, spacing: 14) {
                         HStack {
@@ -242,58 +242,56 @@ public struct TVShowDetailsView: View {
                     }
                 }
                 
-                // Fix 2: Trakt Community Comments Section (Guaranteed Display)
-                if !traktComments.isEmpty {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                                .foregroundColor(.red)
-                            Text("Trakt Reactions & Comments (\(traktComments.count))")
-                                .font(.title3).fontWeight(.black)
-                            Spacer()
+                // Trakt Community Comments Section (Always Visible & Populated)
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .foregroundColor(.red)
+                        Text("Trakt Reactions & Comments (\(traktComments.count))")
+                            .font(.title3).fontWeight(.black)
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    
+                    ForEach(traktComments) { comment in
+                        GlassCardView {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(comment.reactionEmoji)
+                                        .font(.title2)
+                                    Text(comment.user.username)
+                                        .font(.subheadline).fontWeight(.bold)
+                                        .foregroundColor(.red)
+                                    Spacer()
+                                    Text(comment.formattedDate)
+                                        .font(.caption2).foregroundColor(.gray)
+                                }
+                                
+                                Text(comment.comment)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                
+                                HStack(spacing: 14) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "hand.thumbsup.fill")
+                                            .font(.caption2)
+                                        Text("\(comment.likes)")
+                                            .font(.caption2).fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.green)
+                                    
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "arrow.turn.down.right")
+                                            .font(.caption2)
+                                        Text("\(comment.replies ?? 0) Replies")
+                                            .font(.caption2).fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.cyan)
+                                }
+                            }
+                            .padding()
                         }
                         .padding(.horizontal)
-                        
-                        ForEach(traktComments) { comment in
-                            GlassCardView {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        Text(comment.reactionEmoji)
-                                            .font(.title2)
-                                        Text(comment.user.username)
-                                            .font(.subheadline).fontWeight(.bold)
-                                            .foregroundColor(.red)
-                                        Spacer()
-                                        Text(comment.formattedDate)
-                                            .font(.caption2).foregroundColor(.gray)
-                                    }
-                                    
-                                    Text(comment.comment)
-                                        .font(.subheadline)
-                                        .foregroundColor(.white)
-                                    
-                                    HStack(spacing: 14) {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "hand.thumbsup.fill")
-                                                .font(.caption2)
-                                            Text("\(comment.likes)")
-                                                .font(.caption2).fontWeight(.bold)
-                                        }
-                                        .foregroundColor(.green)
-                                        
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "arrow.turn.down.right")
-                                                .font(.caption2)
-                                            Text("\(comment.replies ?? 0) Replies")
-                                                .font(.caption2).fontWeight(.bold)
-                                        }
-                                        .foregroundColor(.cyan)
-                                    }
-                                }
-                                .padding()
-                            }
-                            .padding(.horizontal)
-                        }
                     }
                 }
             }
@@ -331,14 +329,15 @@ public struct TVShowDetailsView: View {
     }
     
     private func loadTVDetails() {
+        // Pre-populate Trakt comments immediately
         Task {
+            self.traktComments = await traktService.fetchShowComments(tmdbId: show.id)
             do {
                 let det = try await tmdbService.fetchTVDetails(id: show.id)
                 self.details = det
                 self.credits = det.credits
                 loadSeasonEpisodes(seasonNumber: 1)
                 
-                // Fix 1: Pass unique TV show rating & vote count fallback
                 let imdbIdStr = det.externalIds?.imdbId ?? "tt\(show.id)"
                 self.imdbInfo = await imdbService.fetchIMDbInfo(
                     imdbId: imdbIdStr,
@@ -346,14 +345,12 @@ public struct TVShowDetailsView: View {
                     defaultVoteCount: show.voteCount
                 )
                 self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: imdbIdStr, limit: 50)
-                
-                // Fix 2: Fetch Trakt comments passing tmdbId and imdbId
-                self.traktComments = await traktService.fetchShowComments(tmdbId: show.id, imdbId: det.externalIds?.imdbId)
+                let freshTrakt = await traktService.fetchShowComments(tmdbId: show.id, imdbId: det.externalIds?.imdbId)
+                if !freshTrakt.isEmpty {
+                    self.traktComments = freshTrakt
+                }
             } catch {
                 print("Error loading TV details: \(error)")
-                self.imdbInfo = await imdbService.fetchIMDbInfo(imdbId: "tt\(show.id)", defaultRating: show.voteAverage, defaultVoteCount: show.voteCount)
-                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: "tt\(show.id)", limit: 50)
-                self.traktComments = await traktService.fetchShowComments(tmdbId: show.id)
             }
         }
     }
