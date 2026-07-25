@@ -62,8 +62,8 @@ public final class TMDbService: ObservableObject {
                 urlString += "&first_air_date_year=\(year)"
             }
         }
-        if let minRating = minRating {
-            urlString += "&vote_average.gte=\(minRating)"
+        if let minRating = minRating, minRating > 0 {
+            urlString += "&vote_average.gte=\(minRating)&vote_count.gte=10"
         }
         return try await fetchMediaList(from: urlString, mediaType: mediaType)
     }
