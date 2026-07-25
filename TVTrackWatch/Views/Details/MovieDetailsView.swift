@@ -13,6 +13,7 @@ public struct MovieDetailsView: View {
     @State private var imdbInfo: IMDbInfo?
     @State private var imdbReviews: [IMDbReviewItem] = []
     @State private var traktComments: [TraktComment] = []
+    @State private var selectedReviewTab = 0 // 0: IMDb Reviews, 1: Trakt Reactions
     @State private var isPlayerPresented = false
     
     public init(movie: TMDbMediaItem) {
@@ -192,105 +193,106 @@ public struct MovieDetailsView: View {
                     }
                 }
                 
-                // IMDb Community Reviews (50+ Reviews)
-                if !imdbReviews.isEmpty {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            Image(systemName: "star.bubble.fill")
-                                .foregroundColor(.yellow)
-                            Text("IMDb Community Reviews (\(imdbReviews.count))")
-                                .font(.title3).fontWeight(.black)
-                            Spacer()
-                        }
+                // Tabbed Community Reviews (IMDb Reviews & Trakt Reactions side-by-side tabs)
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Community Discussions & Reviews")
+                        .font(.title3).fontWeight(.black)
                         .padding(.horizontal)
-                        
-                        ForEach(imdbReviews) { review in
+                    
+                    Picker("Review Source", selection: $selectedReviewTab) {
+                        Text("IMDb Reviews (\(imdbReviews.count))").tag(0)
+                        Text("Trakt Reactions (\(traktComments.count))").tag(1)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal)
+                    
+                    if selectedReviewTab == 0 {
+                        // IMDb Tab
+                        if imdbReviews.isEmpty {
+                            GlassCardView {
+                                Text("Loading IMDb Reviews...")
+                                    .foregroundColor(.gray)
+                                    .padding()
+                            }
+                            .padding(.horizontal)
+                        } else {
+                            ForEach(imdbReviews) { review in
+                                GlassCardView {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Text(review.author)
+                                                .font(.subheadline).fontWeight(.bold)
+                                                .foregroundColor(.yellow)
+                                            Spacer()
+                                            if let r = review.authorRating {
+                                                Text("★ \(String(format: "%.1f", r))/10")
+                                                    .font(.caption).fontWeight(.black)
+                                                    .foregroundColor(.yellow)
+                                            }
+                                        }
+                                        
+                                        Text(review.summary)
+                                            .font(.headline)
+                                            .foregroundColor(.white)
+                                        
+                                        Text(review.text)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                        
+                                        HStack(spacing: 12) {
+                                            Text("👍 \(review.upVotes) helpful")
+                                                .font(.caption2).foregroundColor(.gray)
+                                            Text(review.submissionDate)
+                                                .font(.caption2).foregroundColor(.gray)
+                                        }
+                                    }
+                                    .padding()
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                    } else {
+                        // Trakt Tab
+                        ForEach(traktComments) { comment in
                             GlassCardView {
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
-                                        Text(review.author)
+                                        Text(comment.reactionEmoji)
+                                            .font(.title2)
+                                        Text(comment.user.username)
                                             .font(.subheadline).fontWeight(.bold)
-                                            .foregroundColor(.yellow)
+                                            .foregroundColor(.red)
                                         Spacer()
-                                        if let r = review.authorRating {
-                                            Text("★ \(String(format: "%.1f", r))/10")
-                                                .font(.caption).fontWeight(.black)
-                                                .foregroundColor(.yellow)
-                                        }
+                                        Text(comment.formattedDate)
+                                            .font(.caption2).foregroundColor(.gray)
                                     }
                                     
-                                    Text(review.summary)
-                                        .font(.headline)
+                                    Text(comment.comment)
+                                        .font(.subheadline)
                                         .foregroundColor(.white)
                                     
-                                    Text(review.text)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    
-                                    HStack(spacing: 12) {
-                                        Text("👍 \(review.upVotes) helpful")
-                                            .font(.caption2).foregroundColor(.gray)
-                                        Text(review.submissionDate)
-                                            .font(.caption2).foregroundColor(.gray)
+                                    HStack(spacing: 14) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "hand.thumbsup.fill")
+                                                .font(.caption2)
+                                            Text("\(comment.likes)")
+                                                .font(.caption2).fontWeight(.bold)
+                                        }
+                                        .foregroundColor(.green)
+                                        
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "arrow.turn.down.right")
+                                                .font(.caption2)
+                                            Text("\(comment.replies ?? 0) Replies")
+                                                .font(.caption2).fontWeight(.bold)
+                                        }
+                                        .foregroundColor(.cyan)
                                     }
                                 }
                                 .padding()
                             }
                             .padding(.horizontal)
                         }
-                    }
-                }
-                
-                // Trakt Community Comments Section (Always Visible & Populated)
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Image(systemName: "bubble.left.and.bubble.right.fill")
-                            .foregroundColor(.red)
-                        Text("Trakt Reactions & Comments (\(traktComments.count))")
-                            .font(.title3).fontWeight(.black)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    ForEach(traktComments) { comment in
-                        GlassCardView {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text(comment.reactionEmoji)
-                                        .font(.title2)
-                                    Text(comment.user.username)
-                                        .font(.subheadline).fontWeight(.bold)
-                                        .foregroundColor(.red)
-                                    Spacer()
-                                    Text(comment.formattedDate)
-                                        .font(.caption2).foregroundColor(.gray)
-                                }
-                                
-                                Text(comment.comment)
-                                    .font(.subheadline)
-                                    .foregroundColor(.white)
-                                
-                                HStack(spacing: 14) {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "hand.thumbsup.fill")
-                                            .font(.caption2)
-                                        Text("\(comment.likes)")
-                                            .font(.caption2).fontWeight(.bold)
-                                    }
-                                    .foregroundColor(.green)
-                                    
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "arrow.turn.down.right")
-                                            .font(.caption2)
-                                        Text("\(comment.replies ?? 0) Replies")
-                                            .font(.caption2).fontWeight(.bold)
-                                    }
-                                    .foregroundColor(.cyan)
-                                }
-                            }
-                            .padding()
-                        }
-                        .padding(.horizontal)
                     }
                 }
             }
@@ -320,7 +322,6 @@ public struct MovieDetailsView: View {
     }
     
     private func loadMovieDetails() {
-        // Pre-populate Trakt comments immediately
         Task {
             self.traktComments = await traktService.fetchMovieComments(tmdbId: movie.id)
             do {
