@@ -171,10 +171,41 @@ public struct TVShowDetailsView: View {
                 
                 // Dropdown Season Menu & EpisodeCardView List
                 VStack(alignment: .leading, spacing: 16) {
-                    HStack {
+                    HStack(spacing: 12) {
                         Text("Episodes")
                             .font(.title2).fontWeight(.bold)
                         Spacer()
+                        
+                        if let episodes = seasonDetails?.episodes, !episodes.isEmpty {
+                            Button(action: {
+                                dataManager.markSeasonAsWatched(
+                                    tvId: show.id,
+                                    season: selectedSeason,
+                                    episodes: episodes,
+                                    showTitle: show.displayTitle,
+                                    posterPath: show.posterPath,
+                                    backdropPath: show.backdropPath,
+                                    voteAverage: show.voteAverage,
+                                    releaseDate: show.releaseDate
+                                )
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "checkmark.seal.fill")
+                                    Text("Mark Season Watched")
+                                }
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.green.opacity(0.25))
+                                .foregroundColor(.green)
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.green.opacity(0.4), lineWidth: 1)
+                                )
+                            }
+                        }
                         
                         // Original Dropdown Menu for Season Selection
                         Menu {

@@ -94,6 +94,42 @@ public final class DataManager: ObservableObject {
         saveToDisk()
     }
     
+    public func markSeasonAsWatched(
+        tvId: Int,
+        season: Int,
+        episodes: [TMDbEpisode],
+        showTitle: String? = nil,
+        posterPath: String? = nil,
+        backdropPath: String? = nil,
+        voteAverage: Double? = nil,
+        releaseDate: String? = nil
+    ) {
+        let key = "tv_\(tvId)"
+        var current = items[key] ?? LocalMediaItem(
+            tmdbId: tvId,
+            mediaType: "tv",
+            title: showTitle ?? "",
+            posterPath: posterPath,
+            backdropPath: backdropPath,
+            voteAverage: voteAverage,
+            releaseDate: releaseDate
+        )
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let todayStr = dateFormatter.string(from: Date())
+        
+        for ep in episodes {
+            let epKey = "\(season)_\(ep.episodeNumber)"
+            current.watchedEpisodes[epKey] = todayStr
+        }
+        
+        current.lastWatchedDate = Date()
+        current.isWatchlist = true
+        items[key] = current
+        saveToDisk()
+    }
+    
     public func updatePlaybackProgress(tmdbId: Int, mediaType: String, seconds: Double) {
         let key = "\(mediaType)_\(tmdbId)"
         guard var current = items[key] else { return }
