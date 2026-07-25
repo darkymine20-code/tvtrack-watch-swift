@@ -63,6 +63,29 @@ public struct MovieDetailsView: View {
                             traktRating: (movie.voteAverage ?? 8.0) * 0.95
                         )
                         
+                        // Release Date & Runtime Metadata Row
+                        HStack(spacing: 16) {
+                            if let releaseDate = details?.releaseDate ?? movie.releaseDate, !releaseDate.isEmpty {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "calendar")
+                                        .foregroundColor(.cyan)
+                                    Text("Released: \(releaseDate)")
+                                        .fontWeight(.bold)
+                                }
+                            }
+                            
+                            if let runtime = details?.runtime, runtime > 0 {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "clock.fill")
+                                        .foregroundColor(.yellow)
+                                    Text("Runtime: \(formatRuntime(runtime))")
+                                        .fontWeight(.bold)
+                                }
+                            }
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                        
                         HStack(spacing: 14) {
                             Button(action: { isPlayerPresented = true }) {
                                 HStack(spacing: 8) {
@@ -362,6 +385,16 @@ public struct MovieDetailsView: View {
             } catch {
                 print("Error loading movie details: \(error)")
             }
+        }
+    }
+    
+    private func formatRuntime(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let mins = minutes % 60
+        if hours > 0 {
+            return "\(hours)h \(mins)m"
+        } else {
+            return "\(mins)m"
         }
     }
 }
