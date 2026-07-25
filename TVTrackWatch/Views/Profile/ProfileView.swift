@@ -72,7 +72,7 @@ public struct ProfileView: View {
                     HStack(spacing: 20) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.system(size: 68))
-                            .foregroundStyle(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .foregroundColor(.blue)
                         
                         VStack(alignment: .leading, spacing: 4) {
                             Text("iPadOS Local Profile")
@@ -182,38 +182,6 @@ public struct ProfileView: View {
                 }
             }
             .padding(.vertical)
-        }
-    }
-}
-
-struct CounterCardView: View {
-    let filter: ProfileView.ProfileFilter
-    let count: Int
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            GlassCardView {
-                VStack(spacing: 8) {
-                    Image(systemName: filter.icon)
-                        .font(.title)
-                        .foregroundColor(filter.color)
-                    Text("\(count)")
-                        .font(.system(size: 30, weight: .black))
-                        .foregroundColor(.white)
-                    Text(filter.rawValue)
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(isSelected ? filter.color : .secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(isSelected ? filter.color : Color.clear, lineWidth: 2.5)
-            )
         }
     }
 }

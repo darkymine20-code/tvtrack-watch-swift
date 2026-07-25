@@ -40,13 +40,13 @@ public struct iPadMainNavigationView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "play.tv.fill")
                             .font(.title)
-                            .foregroundStyle(LinearGradient(colors: [.cyan, .blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .foregroundColor(.blue)
                             .shadow(color: .blue.opacity(0.6), radius: 8)
                         
                         Text("tvtrack+ watch")
                             .font(.title2)
                             .fontWeight(.black)
-                            .foregroundStyle(LinearGradient(colors: [.white, .cyan.opacity(0.8)], startPoint: .leading, endPoint: .trailing))
+                            .foregroundColor(.white)
                     }
                     
                     Spacer()
@@ -103,7 +103,7 @@ public struct iPadMainNavigationView: View {
                 .overlay(
                     Rectangle()
                         .frame(height: 1)
-                        .foregroundStyle(LinearGradient(colors: [.blue.opacity(0.4), .purple.opacity(0.3), .clear], startPoint: .leading, endPoint: .trailing)),
+                        .foregroundColor(Color.blue.opacity(0.4)),
                     alignment: .bottom
                 )
                 
