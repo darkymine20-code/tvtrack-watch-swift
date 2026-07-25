@@ -93,13 +93,7 @@ public struct iPadMainNavigationView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 14)
-                .background(
-                    #if os(iOS)
-                    Rectangle().fill(.ultraThinMaterial).opacity(0.95)
-                    #else
-                    Color.black.opacity(0.8)
-                    #endif
-                )
+                .background(Color.black.opacity(0.85))
                 .overlay(
                     Rectangle()
                         .frame(height: 1)

@@ -185,3 +185,42 @@ public struct ProfileView: View {
         }
     }
 }
+
+public struct CounterCardView: View {
+    public let filter: ProfileView.ProfileFilter
+    public let count: Int
+    public let isSelected: Bool
+    public let action: () -> Void
+    
+    public init(filter: ProfileView.ProfileFilter, count: Int, isSelected: Bool, action: @escaping () -> Void) {
+        self.filter = filter
+        self.count = count
+        self.isSelected = isSelected
+        self.action = action
+    }
+    
+    public var body: some View {
+        Button(action: action) {
+            GlassCardView {
+                VStack(spacing: 8) {
+                    Image(systemName: filter.icon)
+                        .font(.title)
+                        .foregroundColor(filter.color)
+                    Text("\(count)")
+                        .font(.system(size: 30, weight: .black))
+                        .foregroundColor(.white)
+                    Text(filter.rawValue)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(isSelected ? filter.color : .secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(isSelected ? filter.color : Color.clear, lineWidth: 2.5)
+            )
+        }
+    }
+}
