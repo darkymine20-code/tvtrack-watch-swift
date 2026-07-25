@@ -18,6 +18,9 @@ public struct TVShowDetailsView: View {
     @State private var seasonDetails: TMDbSeasonDetails?
     @State private var isPlayerPresented = false
     @State private var activeEpisode: (season: Int, episode: Int)?
+    @State private var currentDate = Date()
+    
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
     public init(show: TMDbMediaItem) {
         self.show = show
@@ -65,6 +68,53 @@ public struct TVShowDetailsView: View {
                             tmdbRating: show.voteAverage,
                             traktRating: (show.voteAverage ?? 8.0) * 0.95
                         )
+                        
+                        // Live Countdown Badge for Upcoming Episode
+                        if let nextEp = nextEpisodeInfo {
+                            HStack(spacing: 12) {
+                                Image(systemName: "timer")
+                                    .font(.title2)
+                                    .foregroundColor(.yellow)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 6) {
+                                        Text("UPCOMING EPISODE COUNTDOWN")
+                                            .font(.caption2).fontWeight(.black)
+                                            .foregroundColor(.yellow)
+                                        
+                                        Text("S\(nextEp.season) E\(nextEp.episode)")
+                                            .font(.caption2).fontWeight(.heavy)
+                                            .padding(.horizontal, 6).padding(.vertical, 2)
+                                            .background(Color.yellow.opacity(0.25))
+                                            .foregroundColor(.yellow)
+                                            .cornerRadius(4)
+                                    }
+                                    
+                                    Text(nextEp.title)
+                                        .font(.subheadline).fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .lineLimit(1)
+                                    
+                                    Text(nextEp.countdownText)
+                                        .font(.footnote).fontWeight(.black)
+                                        .foregroundColor(.cyan)
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(Color.black.opacity(0.85))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(
+                                                LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                                lineWidth: 1.5
+                                            )
+                                    )
+                            )
+                            .shadow(color: .orange.opacity(0.4), radius: 8)
+                        }
                         
                         if let key = details?.youtubeTrailerKey {
                             Button(action: { openYouTubeTrailer(key: key) }) {
@@ -423,6 +473,9 @@ public struct TVShowDetailsView: View {
         .task {
             loadTVDetails()
         }
+        .onReceive(timer) { _ in
+            currentDate = Date()
+        }
     }
     
     private func openYouTubeTrailer(key: String) {
@@ -494,6 +547,61 @@ public struct TVShowDetailsView: View {
             } catch {
                 print("Error loading season details: \(error)")
             }
+        }
+    }
+    
+    private var nextEpisodeInfo: (season: Int, episode: Int, title: String, airDate: String, countdownText: String)? {
+        if let next = details?.nextEpisodeToAir, let airDate = next.airDate, !airDate.isEmpty {
+            let text = formatCountdown(airDate: airDate)
+            return (
+                season: next.seasonNumber ?? 1,
+                episode: next.episodeNumber ?? 1,
+                title: next.name,
+                airDate: airDate,
+                countdownText: text
+            )
+        }
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let todayStr = formatter.string(from: currentDate)
+        
+        if let epList = seasonDetails?.episodes, let upcoming = epList.first(where: { ep in
+            guard let date = ep.airDate, !date.isEmpty else { return false }
+            return date >= todayStr
+        }), let airDate = upcoming.airDate {
+            let text = formatCountdown(airDate: airDate)
+            return (
+                season: upcoming.seasonNumber,
+                episode: upcoming.episodeNumber,
+                title: upcoming.name,
+                airDate: airDate,
+                countdownText: text
+            )
+        }
+        
+        return nil
+    }
+    
+    private func formatCountdown(airDate: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let targetDate = formatter.date(from: airDate) else { return "Airing soon" }
+        
+        let diff = targetDate.timeIntervalSince(currentDate)
+        if diff <= 0 {
+            return "Airing Today! 🎉"
+        }
+        
+        let days = Int(diff) / 86400
+        let hours = (Int(diff) % 86400) / 3600
+        let minutes = (Int(diff) % 3600) / 60
+        let seconds = Int(diff) % 60
+        
+        if days > 0 {
+            return "Airs in: \(days)d \(hours)h \(minutes)m \(seconds)s"
+        } else {
+            return "Airs in: \(hours)h \(minutes)m \(seconds)s"
         }
     }
 }

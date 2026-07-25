@@ -97,6 +97,22 @@ public struct TMDbMovieDetails: Codable, Identifiable {
     }
 }
 
+public struct TMDbNextEpisode: Codable, Identifiable, Hashable {
+    public let id: Int
+    public let name: String
+    public let overview: String?
+    public let airDate: String?
+    public let episodeNumber: Int?
+    public let seasonNumber: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, overview
+        case airDate = "air_date"
+        case episodeNumber = "episode_number"
+        case seasonNumber = "season_number"
+    }
+}
+
 public struct TMDbTVDetails: Codable, Identifiable {
     public let id: Int
     public let name: String
@@ -107,8 +123,10 @@ public struct TMDbTVDetails: Codable, Identifiable {
     public let voteCount: Int?
     public let firstAirDate: String?
     public let lastAirDate: String?
+    public let status: String?
     public let numberOfSeasons: Int?
     public let numberOfEpisodes: Int?
+    public let nextEpisodeToAir: TMDbNextEpisode?
     public let seasons: [TMDbSeasonSummary]?
     public let genres: [TMDbGenre]?
     public let credits: TMDbCredits?
@@ -116,7 +134,7 @@ public struct TMDbTVDetails: Codable, Identifiable {
     public let externalIds: TMDbExternalIds?
     
     enum CodingKeys: String, CodingKey {
-        case id, name, overview, genres, seasons, credits, videos
+        case id, name, overview, status, genres, seasons, credits, videos
         case posterPath = "poster_path"
         case backdropPath = "backdrop_path"
         case voteAverage = "vote_average"
@@ -125,6 +143,7 @@ public struct TMDbTVDetails: Codable, Identifiable {
         case lastAirDate = "last_air_date"
         case numberOfSeasons = "number_of_seasons"
         case numberOfEpisodes = "number_of_episodes"
+        case nextEpisodeToAir = "next_episode_to_air"
         case externalIds = "external_ids"
     }
     
