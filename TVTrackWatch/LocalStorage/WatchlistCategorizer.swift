@@ -44,7 +44,7 @@ public final class WatchlistCategorizer {
     
     // MARK: - Cast & Director Stats (Threshold >= 4 items)
     public static func calculateTopStats(items: [LocalMediaItem], minThreshold: Int = 4) -> (topActors: [PersonStat], topDirectors: [PersonStat]) {
-        let watchedItems = items.values.filter { $0.isWatched }
+        let watchedItems = items.filter { $0.isWatched }
         
         var actorCounts: [String: Int] = [:]
         var directorCounts: [String: Int] = [:]

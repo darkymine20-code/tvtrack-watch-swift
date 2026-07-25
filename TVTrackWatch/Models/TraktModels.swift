@@ -43,12 +43,11 @@ public struct TraktComment: Codable, Identifiable {
     public let review: Bool
     public let rating: Double?
     public let likes: Int
-    case createdAt = "created_at"
+    public let createdAt: String
     public let user: TraktUser
     
     public var formattedDate: String {
-        let dateStr = createdAt
-        return String(dateStr.prefix(10))
+        return String(createdAt.prefix(10))
     }
     
     enum CodingKeys: String, CodingKey {
