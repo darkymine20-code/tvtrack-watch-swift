@@ -11,13 +11,33 @@ public struct GlassCardView<Content: View>: View {
         content
             .padding()
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                ZStack {
+                    #if os(iOS)
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                    #else
+                    Color.white.opacity(0.12)
+                    #endif
+                    
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.03)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            )
+            .cornerRadius(18)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.35), Color.blue.opacity(0.2), Color.purple.opacity(0.1)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
                     )
             )
-            .shadow(color: Color.black.opacity(0.3), radius: 10, x: 0, y: 5)
+            .shadow(color: Color.blue.opacity(0.15), radius: 12, x: 0, y: 6)
     }
 }

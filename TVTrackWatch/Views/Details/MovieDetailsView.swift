@@ -9,13 +9,14 @@ public struct MovieDetailsView: View {
     @ObservedObject var tmdbService = TMDbService.shared
     
     @State private var movieDetails: TMDbMovieDetails?
+    @State private var castMembers: [TMDbCastMember] = []
     @State private var imdbInfo: IMDbInfo?
     @State private var imdbReviews: [IMDbReviewItem] = []
     @State private var traktComments: [TraktComment] = []
     
     @State private var userRating: Double?
     @State private var isPlayerPresented = false
-    @State private var selectedCommentTab = 0 // 0: Trakt, 1: IMDb
+    @State private var selectedCommentTab = 0 // 0: IMDb (100), 1: Trakt
     
     public init(movie: TMDbMediaItem) {
         self.movie = movie
@@ -27,8 +28,8 @@ public struct MovieDetailsView: View {
     
     public var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                // Hero Section with Backdrop
+            VStack(alignment: .leading, spacing: 24) {
+                // Hero Section with Backdrop & Glow
                 ZStack(alignment: .bottomLeading) {
                     if let backdropURL = movie.backdropURL {
                         AsyncImage(url: backdropURL) { image in
@@ -36,19 +37,19 @@ public struct MovieDetailsView: View {
                         } placeholder: {
                             Rectangle().fill(Color.gray.opacity(0.3))
                         }
-                        .frame(height: 340)
+                        .frame(height: 380)
                         .clipped()
                         .overlay(
                             LinearGradient(
-                                colors: [.clear, .black.opacity(0.9)],
+                                colors: [.clear, Color.black.opacity(0.4), Color.black],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
                         )
                     } else {
                         Rectangle()
-                            .fill(Color.gray.opacity(0.4))
-                            .frame(height: 340)
+                            .fill(LinearGradient(colors: [.blue.opacity(0.3), .purple.opacity(0.3), .black], startPoint: .top, endPoint: .bottom))
+                            .frame(height: 380)
                     }
                     
                     HStack(alignment: .bottom, spacing: 20) {
@@ -59,20 +60,24 @@ public struct MovieDetailsView: View {
                             } placeholder: {
                                 Rectangle().fill(Color.gray.opacity(0.3))
                             }
-                            .frame(width: 130, height: 195)
-                            .cornerRadius(12)
-                            .shadow(radius: 10)
+                            .frame(width: 140, height: 210)
+                            .cornerRadius(16)
+                            .shadow(color: .blue.opacity(0.5), radius: 12)
                         }
                         
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text(movie.displayTitle)
-                                .font(.system(size: 32, weight: .bold))
+                                .font(.system(size: 34, weight: .black))
                                 .foregroundColor(.white)
                             
                             HStack(spacing: 12) {
                                 Text(movie.releaseYear)
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .fontWeight(.bold)
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(Color.white.opacity(0.15))
+                                    .cornerRadius(6)
+                                
                                 if let runtime = movieDetails?.runtime {
                                     Text("\(runtime) mins")
                                         .font(.subheadline)
@@ -91,7 +96,7 @@ public struct MovieDetailsView: View {
                             // Quick Action Buttons
                             HStack(spacing: 12) {
                                 Button(action: {
-                                    let cast = movieDetails?.credits?.cast.map { $0.name } ?? []
+                                    let cast = castMembers.map { $0.name }
                                     let directors = movieDetails?.credits?.crew.filter { $0.job == "Director" }.map { $0.name } ?? []
                                     dataManager.toggleWatchlist(item: movie, castNames: cast, directorNames: directors)
                                 }) {
@@ -99,30 +104,32 @@ public struct MovieDetailsView: View {
                                         Image(systemName: (localItem?.isWatchlist ?? false) ? "bookmark.fill" : "bookmark")
                                         Text((localItem?.isWatchlist ?? false) ? "In Watchlist" : "+ Watchlist")
                                     }
-                                    .font(.subheadline).fontWeight(.semibold)
-                                    .padding(.horizontal, 14).padding(.vertical, 8)
+                                    .font(.subheadline).fontWeight(.bold)
+                                    .padding(.horizontal, 16).padding(.vertical, 10)
                                     .background((localItem?.isWatchlist ?? false) ? Color.blue : Color.white.opacity(0.15))
-                                    .foregroundColor(.white).cornerRadius(10)
+                                    .foregroundColor(.white).cornerRadius(12)
                                 }
                                 
                                 Button(action: {
-                                    dataManager.toggleFavorite(item: movie)
+                                    let cast = castMembers.map { $0.name }
+                                    dataManager.toggleFavorite(item: movie, castNames: cast)
                                 }) {
                                     Image(systemName: (localItem?.isFavorite ?? false) ? "heart.fill" : "heart")
-                                        .font(.subheadline)
+                                        .font(.title3)
                                         .padding(10)
                                         .background((localItem?.isFavorite ?? false) ? Color.red : Color.white.opacity(0.15))
-                                        .foregroundColor(.white).cornerRadius(10)
+                                        .foregroundColor(.white).cornerRadius(12)
                                 }
                                 
                                 Button(action: {
-                                    dataManager.toggleWatched(item: movie)
+                                    let cast = castMembers.map { $0.name }
+                                    dataManager.toggleWatched(item: movie, castNames: cast)
                                 }) {
                                     Image(systemName: (localItem?.isWatched ?? false) ? "checkmark.circle.fill" : "checkmark.circle")
-                                        .font(.subheadline)
+                                        .font(.title3)
                                         .padding(10)
                                         .background((localItem?.isWatched ?? false) ? Color.green : Color.white.opacity(0.15))
-                                        .foregroundColor(.white).cornerRadius(10)
+                                        .foregroundColor(.white).cornerRadius(12)
                                 }
                                 
                                 Button(action: { isPlayerPresented = true }) {
@@ -130,9 +137,11 @@ public struct MovieDetailsView: View {
                                         Image(systemName: "play.fill")
                                         Text("Watch Now")
                                     }
-                                    .font(.subheadline).fontWeight(.bold)
-                                    .padding(.horizontal, 18).padding(.vertical, 10)
-                                    .background(Color.green).foregroundColor(.white).cornerRadius(10)
+                                    .font(.subheadline).fontWeight(.black)
+                                    .padding(.horizontal, 20).padding(.vertical, 12)
+                                    .background(LinearGradient(colors: [.green, .blue], startPoint: .leading, endPoint: .trailing))
+                                    .foregroundColor(.white).cornerRadius(12)
+                                    .shadow(color: .green.opacity(0.4), radius: 8)
                                 }
                             }
                         }
@@ -151,69 +160,83 @@ public struct MovieDetailsView: View {
                 // Overview & Synopsis
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Synopsis")
-                        .font(.title2).fontWeight(.bold)
+                        .font(.title2).fontWeight(.black)
                     Text(movieDetails?.overview ?? movie.overview ?? "No synopsis available.")
                         .font(.body)
                         .foregroundColor(.secondary)
-                        .lineSpacing(4)
+                        .lineSpacing(6)
                 }
                 .padding(.horizontal)
                 
-                // Embedded YouTube Trailer Deep Link
-                if let key = movieDetails?.youtubeTrailerKey, let youtubeURL = URL(string: "https://www.youtube.com/watch?v=\(key)") {
-                    Link(destination: youtubeURL) {
+                // YouTube App Deep Link Button (Issue 1)
+                if let key = movieDetails?.youtubeTrailerKey {
+                    Button(action: {
+                        openYouTubeTrailer(key: key)
+                    }) {
                         HStack {
                             Image(systemName: "play.rectangle.fill")
                                 .font(.title2)
                                 .foregroundColor(.red)
-                            Text("Watch Official Trailer on YouTube")
+                            Text("Open Official Trailer in YouTube App")
                                 .font(.headline)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             Spacer()
-                            Image(systemName: "arrow.up.right.square")
-                                .foregroundColor(.gray)
+                            Image(systemName: "arrow.up.right.app.fill")
+                                .font(.title3)
+                                .foregroundColor(.red)
                         }
                         .padding()
                         .background(Color.white.opacity(0.08))
-                        .cornerRadius(12)
+                        .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color.red.opacity(0.3), lineWidth: 1)
+                        )
                     }
                     .padding(.horizontal)
                 }
                 
-                // Cast & Crew List
-                if let cast = movieDetails?.credits?.cast, !cast.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Top Cast")
-                            .font(.title2).fontWeight(.bold)
+                // Cast & Crew List (Issue 4)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Cast & Crew")
+                        .font(.title2).fontWeight(.black)
+                        .padding(.horizontal)
+                    
+                    if castMembers.isEmpty {
+                        Text("Loading cast details...")
+                            .font(.subheadline).foregroundColor(.gray)
                             .padding(.horizontal)
-                        
+                    } else {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 16) {
-                                ForEach(cast.prefix(12)) { member in
-                                    VStack(spacing: 6) {
+                                ForEach(castMembers) { member in
+                                    VStack(spacing: 8) {
                                         if let profileURL = member.profileURL {
                                             AsyncImage(url: profileURL) { img in
                                                 img.resizable().aspectRatio(contentMode: .fill)
                                             } placeholder: {
                                                 Circle().fill(Color.gray.opacity(0.3))
                                             }
-                                            .frame(width: 70, height: 70)
+                                            .frame(width: 75, height: 75)
                                             .clipShape(Circle())
+                                            .overlay(Circle().stroke(Color.blue.opacity(0.4), lineWidth: 2))
                                         } else {
                                             Circle()
                                                 .fill(Color.gray.opacity(0.3))
-                                                .frame(width: 70, height: 70)
+                                                .frame(width: 75, height: 75)
                                                 .overlay(Image(systemName: "person.fill").foregroundColor(.white))
                                         }
                                         
                                         Text(member.name)
-                                            .font(.caption).fontWeight(.semibold)
+                                            .font(.caption).fontWeight(.bold)
+                                            .foregroundColor(.white)
                                             .lineLimit(1)
                                         Text(member.character ?? "")
                                             .font(.caption2).foregroundColor(.gray)
                                             .lineLimit(1)
                                     }
-                                    .frame(width: 80)
+                                    .frame(width: 85)
                                 }
                             }
                             .padding(.horizontal)
@@ -221,69 +244,88 @@ public struct MovieDetailsView: View {
                     }
                 }
                 
-                // Community Reviews Section (Trakt + IMDb)
-                VStack(alignment: .leading, spacing: 12) {
+                // Community Reviews Section (Issue 3: All 100+ Reviews)
+                VStack(alignment: .leading, spacing: 14) {
                     Text("Community Reviews & Comments")
-                        .font(.title2).fontWeight(.bold)
+                        .font(.title2).fontWeight(.black)
                         .padding(.horizontal)
                     
                     Picker("Reviews Source", selection: $selectedCommentTab) {
-                        Text("IMDb User Reviews (\(imdbReviews.count))").tag(0)
+                        Text("IMDb Reviews (\(imdbReviews.count))").tag(0)
                         Text("Trakt Community (\(traktComments.count))").tag(1)
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     .padding(.horizontal)
                     
                     if selectedCommentTab == 0 {
-                        VStack(spacing: 12) {
-                            ForEach(imdbReviews.prefix(5)) { review in
-                                GlassCardView {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack {
-                                            Text(review.author)
-                                                .font(.headline)
-                                            Spacer()
-                                            if let r = review.authorRating {
-                                                Text("★ \(String(format: "%.0f", r))/10")
-                                                    .font(.subheadline).foregroundColor(.yellow)
+                        if imdbReviews.isEmpty {
+                            Text("Fetching IMDb user reviews...")
+                                .font(.subheadline).foregroundColor(.gray)
+                                .padding(.horizontal)
+                        } else {
+                            VStack(spacing: 14) {
+                                ForEach(imdbReviews) { review in
+                                    GlassCardView {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack {
+                                                Text(review.author)
+                                                    .font(.headline)
+                                                    .foregroundColor(.blue)
+                                                Spacer()
+                                                if let r = review.authorRating {
+                                                    Text("★ \(String(format: "%.0f", r))/10")
+                                                        .font(.subheadline).fontWeight(.bold).foregroundColor(.yellow)
+                                                }
                                             }
+                                            if !review.summary.isEmpty {
+                                                Text(review.summary)
+                                                    .font(.subheadline).fontWeight(.bold)
+                                                    .foregroundColor(.white)
+                                            }
+                                            Text(review.text)
+                                                .font(.body)
+                                                .foregroundColor(.secondary)
+                                                .lineSpacing(4)
                                         }
-                                        Text(review.summary)
-                                            .font(.subheadline).fontWeight(.semibold)
-                                        Text(review.text)
-                                            .font(.caption).foregroundColor(.secondary)
-                                            .lineLimit(4)
                                     }
                                 }
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                     } else {
-                        VStack(spacing: 12) {
-                            ForEach(traktComments.prefix(5)) { comment in
-                                GlassCardView {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        HStack {
-                                            Text(comment.user.username)
-                                                .font(.headline)
-                                            Spacer()
-                                            if let r = comment.rating {
-                                                Text("★ \(String(format: "%.0f", r))/10")
-                                                    .font(.subheadline).foregroundColor(.yellow)
+                        if traktComments.isEmpty {
+                            Text("No Trakt comments found.")
+                                .font(.subheadline).foregroundColor(.gray)
+                                .padding(.horizontal)
+                        } else {
+                            VStack(spacing: 14) {
+                                ForEach(traktComments) { comment in
+                                    GlassCardView {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            HStack {
+                                                Text(comment.user.username)
+                                                    .font(.headline)
+                                                    .foregroundColor(.purple)
+                                                Spacer()
+                                                if let r = comment.rating {
+                                                    Text("★ \(String(format: "%.0f", r))/10")
+                                                        .font(.subheadline).fontWeight(.bold).foregroundColor(.yellow)
+                                                }
                                             }
+                                            Text(comment.comment)
+                                                .font(.body)
+                                                .foregroundColor(.secondary)
+                                                .lineSpacing(4)
                                         }
-                                        Text(comment.comment)
-                                            .font(.body)
-                                            .foregroundColor(.secondary)
                                     }
                                 }
                             }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
                     }
                 }
             }
-            .padding(.bottom, 40)
+            .padding(.bottom, 60)
         }
         .sheet(isPresented: $isPlayerPresented) {
             VideoPlayerView(title: movie.displayTitle, tmdbId: movie.id, isTV: false)
@@ -292,14 +334,29 @@ public struct MovieDetailsView: View {
             self.userRating = localItem?.userRating
             do {
                 self.movieDetails = try await tmdbService.fetchMovieDetails(id: movie.id)
+                let credits = try await tmdbService.fetchMovieCredits(id: movie.id)
+                self.castMembers = credits.cast
+                
                 if let imdbId = movieDetails?.imdbId {
                     self.imdbInfo = try await imdbService.fetchIMDbInfo(imdbId: imdbId)
-                    self.imdbReviews = try await imdbService.fetchIMDbReviews(imdbId: imdbId)
+                    self.imdbReviews = try await imdbService.fetchIMDbReviews(imdbId: imdbId, limit: 100)
                     self.traktComments = try await traktService.fetchMovieComments(traktIdOrSlug: imdbId)
                 }
             } catch {
                 print("Error loading movie details: \(error)")
             }
         }
+    }
+    
+    private func openYouTubeTrailer(key: String) {
+        #if os(iOS)
+        let appURL = URL(string: "youtube://watch?v=\(key)")!
+        let webURL = URL(string: "https://www.youtube.com/watch?v=\(key)")!
+        if UIApplication.shared.canOpenURL(appURL) {
+            UIApplication.shared.open(appURL)
+        } else {
+            UIApplication.shared.open(webURL)
+        }
+        #endif
     }
 }

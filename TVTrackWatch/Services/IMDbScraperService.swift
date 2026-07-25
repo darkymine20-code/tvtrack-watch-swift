@@ -32,8 +32,15 @@ public final class IMDbScraperService: ObservableObject {
         let title = jsonObj["name"] as? String
         let description = jsonObj["description"] as? String
         let aggRatingObj = jsonObj["aggregateRating"] as? [String: Any]
+        
         let rating = aggRatingObj?["ratingValue"] as? Double ?? (aggRatingObj?["ratingValue"] as? String).flatMap { Double($0) }
-        let voteCount = aggRatingObj?["ratingCount"] as? Int
+        
+        var voteCount: Int? = nil
+        if let countInt = aggRatingObj?["ratingCount"] as? Int {
+            voteCount = countInt
+        } else if let countStr = aggRatingObj?["ratingCount"] as? String {
+            voteCount = Int(countStr)
+        }
         
         let genreList = jsonObj["genre"] as? [String] ?? []
         let actorObjects = jsonObj["actor"] as? [[String: Any]] ?? []
@@ -53,8 +60,8 @@ public final class IMDbScraperService: ObservableObject {
         )
     }
     
-    // MARK: - Replicating reviews.py logic natively in Swift via IMDb GraphQL
-    public func fetchIMDbReviews(imdbId: String, limit: Int = 10) async throws -> [IMDbReviewItem] {
+    // MARK: - Replicating reviews.py logic natively in Swift via IMDb GraphQL (Fetching 100 reviews)
+    public func fetchIMDbReviews(imdbId: String, limit: Int = 100) async throws -> [IMDbReviewItem] {
         guard let url = URL(string: "https://caching.graphql.imdb.com/") else { return [] }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

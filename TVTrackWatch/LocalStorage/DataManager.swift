@@ -35,6 +35,8 @@ public final class DataManager: ObservableObject {
         current.isWatched.toggle()
         if current.isWatched {
             current.lastWatchedDate = Date()
+            // Auto-remove from watchlist when marked as watched
+            current.isWatchlist = false
         }
         items[key] = current
         saveToDisk()

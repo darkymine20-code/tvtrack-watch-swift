@@ -45,7 +45,7 @@ public final class TMDbService: ObservableObject {
         return try await fetchMediaList(from: urlString, mediaType: mediaType)
     }
     
-    // MARK: - Details
+    // MARK: - Details & Credits
     public func fetchMovieDetails(id: Int) async throws -> TMDbMovieDetails {
         let urlString = "\(AppConfig.tmdbBaseURL)/movie/\(id)?api_key=\(apiKey)&append_to_response=credits,videos"
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }
@@ -58,6 +58,20 @@ public final class TMDbService: ObservableObject {
         guard let url = URL(string: urlString) else { throw URLError(.badURL) }
         let (data, _) = try await session.data(from: url)
         return try JSONDecoder().decode(TMDbTVDetails.self, from: data)
+    }
+    
+    public func fetchMovieCredits(id: Int) async throws -> TMDbCredits {
+        let urlString = "\(AppConfig.tmdbBaseURL)/movie/\(id)/credits?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+        let (data, _) = try await session.data(from: url)
+        return try JSONDecoder().decode(TMDbCredits.self, from: data)
+    }
+    
+    public func fetchTVCredits(id: Int) async throws -> TMDbCredits {
+        let urlString = "\(AppConfig.tmdbBaseURL)/tv/\(id)/credits?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+        let (data, _) = try await session.data(from: url)
+        return try JSONDecoder().decode(TMDbCredits.self, from: data)
     }
     
     public func fetchSeasonDetails(tvId: Int, seasonNumber: Int) async throws -> TMDbSeasonDetails {

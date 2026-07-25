@@ -37,7 +37,6 @@ public final class TraktService: ObservableObject {
     }
     
     public func fetchAnticipatedShows() async throws -> [TraktShow] {
-        // Trakt anticipated shows endpoint
         let urlString = "\(AppConfig.traktBaseURL)/shows/anticipated?extended=full"
         struct AnticipatedShowWrapper: Codable {
             let show: TraktShow
@@ -46,14 +45,14 @@ public final class TraktService: ObservableObject {
         return list.map { $0.show }
     }
     
-    // MARK: - Public Community Comments
+    // MARK: - Public Community Comments (Fetching up to 100 comments)
     public func fetchMovieComments(traktIdOrSlug: String) async throws -> [TraktComment] {
-        let urlString = "\(AppConfig.traktBaseURL)/movies/\(traktIdOrSlug)/comments/top?extended=full"
+        let urlString = "\(AppConfig.traktBaseURL)/movies/\(traktIdOrSlug)/comments/top?extended=full&limit=100"
         return try await fetchAndDecode(urlString: urlString)
     }
     
     public func fetchShowComments(traktIdOrSlug: String) async throws -> [TraktComment] {
-        let urlString = "\(AppConfig.traktBaseURL)/shows/\(traktIdOrSlug)/comments/top?extended=full"
+        let urlString = "\(AppConfig.traktBaseURL)/shows/\(traktIdOrSlug)/comments/top?extended=full&limit=100"
         return try await fetchAndDecode(urlString: urlString)
     }
     
