@@ -13,7 +13,7 @@ public struct MovieDetailsView: View {
     @State private var imdbInfo: IMDbInfo?
     @State private var imdbReviews: [IMDbReviewItem] = []
     @State private var traktComments: [TraktComment] = []
-    @State private var selectedReviewTab = 0 // 0: IMDb Reviews, 1: Trakt Reactions
+    @State private var selectedReviewTab = 0
     @State private var isPlayerPresented = false
     
     public init(movie: TMDbMediaItem) {
@@ -193,7 +193,7 @@ public struct MovieDetailsView: View {
                     }
                 }
                 
-                // Tabbed Community Reviews (IMDb Reviews & Trakt Reactions side-by-side tabs)
+                // Tabbed Community Reviews (IMDb Reviews & Trakt Reactions)
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Community Discussions & Reviews")
                         .font(.title3).fontWeight(.black)
@@ -329,14 +329,14 @@ public struct MovieDetailsView: View {
                 self.details = det
                 self.credits = det.credits
                 
-                let imdbIdStr = det.imdbId ?? "tt\(movie.id)"
+                let resolvedImdbId = det.imdbId ?? (await tmdbService.fetchIMDbId(mediaType: "movie", id: movie.id)) ?? "tt\(movie.id)"
                 self.imdbInfo = await imdbService.fetchIMDbInfo(
-                    imdbId: imdbIdStr,
+                    imdbId: resolvedImdbId,
                     defaultRating: movie.voteAverage,
                     defaultVoteCount: movie.voteCount
                 )
-                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: imdbIdStr, limit: 50)
-                let freshTrakt = await traktService.fetchMovieComments(tmdbId: movie.id, imdbId: det.imdbId)
+                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: resolvedImdbId, limit: 50)
+                let freshTrakt = await traktService.fetchMovieComments(tmdbId: movie.id, imdbId: resolvedImdbId)
                 if !freshTrakt.isEmpty {
                     self.traktComments = freshTrakt
                 }

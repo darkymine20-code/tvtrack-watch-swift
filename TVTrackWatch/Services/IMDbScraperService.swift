@@ -15,11 +15,95 @@ public final class IMDbScraperService: ObservableObject {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     ]
     
-    // MARK: - IMDb Live Info & Rating Scraper (Fix 1: Unique Dynamic Rating & Vote Count)
+    // MARK: - IMDb Real Rating & Vote Count Fetcher (GraphQL TitleRating Query)
     public func fetchIMDbInfo(imdbId: String, defaultRating: Double? = nil, defaultVoteCount: Int? = nil) async -> IMDbInfo? {
-        guard let url = URL(string: "https://www.imdb.com/title/\(imdbId)/") else {
-            return IMDbInfo(id: imdbId, title: nil, description: nil, rating: defaultRating ?? 8.0, voteCount: defaultVoteCount ?? 50000, genres: [], directors: [], actors: [])
+        // Tier 1: Official IMDb GraphQL TitleRating Query
+        if let liveRating = await fetchGraphQLRating(imdbId: imdbId) {
+            return IMDbInfo(
+                id: imdbId,
+                title: nil,
+                description: nil,
+                rating: liveRating.rating,
+                voteCount: liveRating.voteCount,
+                genres: [],
+                directors: [],
+                actors: []
+            )
         }
+        
+        // Tier 2: HTML JSON-LD Scraper
+        if let sc = await fetchHTMLRating(imdbId: imdbId) {
+            return IMDbInfo(
+                id: imdbId,
+                title: sc.title,
+                description: sc.description,
+                rating: sc.rating,
+                voteCount: sc.voteCount,
+                genres: sc.genres,
+                directors: sc.directors,
+                actors: sc.actors
+            )
+        }
+        
+        // Tier 3: Return exact item fallback rating (from TMDb voteAverage & voteCount)
+        return IMDbInfo(
+            id: imdbId,
+            title: nil,
+            description: nil,
+            rating: defaultRating ?? 8.1,
+            voteCount: defaultVoteCount ?? 85000,
+            genres: [],
+            directors: [],
+            actors: []
+        )
+    }
+    
+    private func fetchGraphQLRating(imdbId: String) async -> (rating: Double, voteCount: Int)? {
+        guard let url = URL(string: "https://caching.graphql.imdb.com/") else { return nil }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        
+        let query = """
+        query TitleRating($id: ID!) {
+          title(id: $id) {
+            ratingsSummary {
+              aggregateRating
+              voteCount
+            }
+          }
+        }
+        """
+        
+        let payload: [String: Any] = [
+            "query": query,
+            "operationName": "TitleRating",
+            "variables": ["id": imdbId]
+        ]
+        
+        request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        
+        do {
+            let (data, response) = try await session.data(for: request)
+            if let httpResp = response as? HTTPURLResponse, httpResp.statusCode == 200,
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let dataDict = json["data"] as? [String: Any],
+               let titleDict = dataDict["title"] as? [String: Any],
+               let summary = titleDict["ratingsSummary"] as? [String: Any],
+               let rating = summary["aggregateRating"] as? Double,
+               let votes = summary["voteCount"] as? Int {
+                return (rating, votes)
+            }
+        } catch {
+            print("GraphQL TitleRating error: \(error)")
+        }
+        return nil
+    }
+    
+    private func fetchHTMLRating(imdbId: String) async -> IMDbInfo? {
+        guard let url = URL(string: "https://www.imdb.com/title/\(imdbId)/") else { return nil }
         var request = URLRequest(url: url)
         for (key, value) in headers {
             request.setValue(value, forHTTPHeaderField: key)
@@ -30,7 +114,6 @@ public final class IMDbScraperService: ObservableObject {
             if let httpResp = response as? HTTPURLResponse, httpResp.statusCode == 200,
                let html = String(data: data, encoding: .utf8) {
                 
-                // Tier 1: JSON-LD Extraction
                 let pattern = "<script type=\"application/ld\\+json\">\\s*(\\{.*?\\})\\s*</script>"
                 if let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]),
                    let match = regex.firstMatch(in: html, options: [], range: NSRange(location: 0, length: html.utf16.count)),
@@ -66,7 +149,7 @@ public final class IMDbScraperService: ObservableObject {
                                 title: title,
                                 description: description,
                                 rating: r,
-                                voteCount: voteCount ?? defaultVoteCount ?? 150000,
+                                voteCount: voteCount ?? 100000,
                                 genres: genreList,
                                 directors: directors,
                                 actors: actors
@@ -76,20 +159,9 @@ public final class IMDbScraperService: ObservableObject {
                 }
             }
         } catch {
-            print("Error fetching IMDb page: \(error)")
+            print("IMDb HTML scraper error: \(error)")
         }
-        
-        // Fix 1: Fallback to item's unique TMDb rating & vote count instead of hardcoded 8.6/220k!
-        return IMDbInfo(
-            id: imdbId,
-            title: nil,
-            description: nil,
-            rating: defaultRating ?? 8.2,
-            voteCount: defaultVoteCount ?? 125000,
-            genres: [],
-            directors: [],
-            actors: []
-        )
+        return nil
     }
     
     // MARK: - IMDb User Reviews Scraper (50+ Top IMDb Reviews)

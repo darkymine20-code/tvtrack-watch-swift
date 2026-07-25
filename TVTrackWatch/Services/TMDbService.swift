@@ -18,7 +18,23 @@ public final class TMDbService: ObservableObject {
         return try await fetchMediaList(from: urlString, mediaType: "tv")
     }
     
-    // MARK: - Paginated Infinite Search (Fix 4)
+    // MARK: - External IDs Lookup (IMDb ID ttXXXXXXX)
+    public func fetchIMDbId(mediaType: String, id: Int) async -> String? {
+        let urlString = "\(AppConfig.tmdbBaseURL)/\(mediaType)/\(id)/external_ids?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else { return nil }
+        do {
+            let (data, _) = try await session.data(from: url)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let imdbId = json["imdb_id"] as? String, !imdbId.isEmpty {
+                return imdbId
+            }
+        } catch {
+            print("Error fetching external IDs: \(error)")
+        }
+        return nil
+    }
+    
+    // MARK: - Paginated Infinite Search
     public func searchMediaPaginated(query: String, page: Int = 1) async throws -> (items: [TMDbMediaItem], totalPages: Int) {
         guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return ([], 0) }
         let urlString = "\(AppConfig.tmdbBaseURL)/search/multi?api_key=\(apiKey)&query=\(encodedQuery)&page=\(page)"

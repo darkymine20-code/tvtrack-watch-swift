@@ -13,7 +13,7 @@ public struct TVShowDetailsView: View {
     @State private var imdbInfo: IMDbInfo?
     @State private var imdbReviews: [IMDbReviewItem] = []
     @State private var traktComments: [TraktComment] = []
-    @State private var selectedReviewTab = 0 // 0: IMDb Reviews, 1: Trakt Reactions
+    @State private var selectedReviewTab = 0
     @State private var selectedSeason = 1
     @State private var seasonDetails: TMDbSeasonDetails?
     @State private var isPlayerPresented = false
@@ -194,7 +194,7 @@ public struct TVShowDetailsView: View {
                     }
                 }
                 
-                // Tabbed Community Reviews (IMDb Reviews & Trakt Reactions side-by-side tabs)
+                // Tabbed Community Reviews (IMDb Reviews & Trakt Reactions)
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Community Discussions & Reviews")
                         .font(.title3).fontWeight(.black)
@@ -339,14 +339,14 @@ public struct TVShowDetailsView: View {
                 self.credits = det.credits
                 loadSeasonEpisodes(seasonNumber: 1)
                 
-                let imdbIdStr = det.externalIds?.imdbId ?? "tt\(show.id)"
+                let resolvedImdbId = det.externalIds?.imdbId ?? (await tmdbService.fetchIMDbId(mediaType: "tv", id: show.id)) ?? "tt\(show.id)"
                 self.imdbInfo = await imdbService.fetchIMDbInfo(
-                    imdbId: imdbIdStr,
+                    imdbId: resolvedImdbId,
                     defaultRating: show.voteAverage,
                     defaultVoteCount: show.voteCount
                 )
-                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: imdbIdStr, limit: 50)
-                let freshTrakt = await traktService.fetchShowComments(tmdbId: show.id, imdbId: det.externalIds?.imdbId)
+                self.imdbReviews = await imdbService.fetchIMDbReviews(imdbId: resolvedImdbId, limit: 50)
+                let freshTrakt = await traktService.fetchShowComments(tmdbId: show.id, imdbId: resolvedImdbId)
                 if !freshTrakt.isEmpty {
                     self.traktComments = freshTrakt
                 }
