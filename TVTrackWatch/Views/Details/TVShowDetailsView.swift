@@ -111,78 +111,182 @@ public struct TVShowDetailsView: View {
                 }
                 .padding(.horizontal)
                 
-                // Season Selector & Episode List
-                if let seasons = details?.seasons, !seasons.isEmpty {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Episodes")
+                // Overview
+                if let overview = details?.overview ?? show.overview, !overview.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Synopsis")
                             .font(.title3).fontWeight(.black)
-                            .padding(.horizontal)
-                        
-                        Picker("Season", selection: $selectedSeason) {
-                            ForEach(seasons.filter { $0.seasonNumber > 0 }) { season in
-                                Text("Season \(season.seasonNumber)").tag(season.seasonNumber)
-                            }
+                        Text(overview)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
+                }
+                
+                // Season Selector & Restored Original Episode List Layout
+                if let seasons = details?.seasons, !seasons.isEmpty {
+                    VStack(alignment: .leading, spacing: 18) {
+                        HStack {
+                            Text("Seasons & Episodes")
+                                .font(.title2).fontWeight(.black)
+                            Spacer()
                         }
-                        .pickerStyle(SegmentedPickerStyle())
                         .padding(.horizontal)
-                        .onChange(of: selectedSeason) {
-                            loadSeasonEpisodes(seasonNumber: selectedSeason)
+                        
+                        // Season Pill Selector
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                ForEach(seasons.filter { $0.seasonNumber > 0 }) { season in
+                                    Button(action: {
+                                        selectedSeason = season.seasonNumber
+                                        loadSeasonEpisodes(seasonNumber: season.seasonNumber)
+                                    }) {
+                                        HStack(spacing: 6) {
+                                            Text("Season \(season.seasonNumber)")
+                                                .font(.subheadline)
+                                                .fontWeight(.bold)
+                                            if let count = season.episodeCount {
+                                                Text("(\(count))")
+                                                    .font(.caption)
+                                                    .opacity(0.8)
+                                            }
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 10)
+                                        .background(selectedSeason == season.seasonNumber ? Color.blue : Color.white.opacity(0.08))
+                                        .foregroundColor(.white)
+                                        .cornerRadius(12)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(selectedSeason == season.seasonNumber ? Color.cyan : Color.white.opacity(0.15), lineWidth: 1)
+                                        )
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
                         }
                         
+                        // Restored Original Episode Card List Layout
                         if let episodes = seasonDetails?.episodes {
-                            LazyVStack(spacing: 12) {
+                            LazyVStack(spacing: 16) {
                                 ForEach(episodes) { ep in
                                     let isWatched = localItem?.watchedEpisodes["\(selectedSeason)_\(ep.episodeNumber)"] != nil
                                     
                                     GlassCardView {
-                                        HStack(spacing: 14) {
+                                        HStack(alignment: .top, spacing: 16) {
+                                            // 16:9 Episode Still Thumbnail
                                             if let stillURL = ep.stillURL {
                                                 AsyncImage(url: stillURL) { img in
                                                     img.resizable().aspectRatio(contentMode: .fill)
                                                 } placeholder: {
                                                     Rectangle().fill(Color.gray.opacity(0.3))
                                                 }
-                                                .frame(width: 100, height: 65)
-                                                .cornerRadius(8)
+                                                .frame(width: 160, height: 95)
+                                                .cornerRadius(12)
                                                 .clipped()
+                                            } else {
+                                                Rectangle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .frame(width: 160, height: 95)
+                                                    .cornerRadius(12)
                                             }
                                             
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text("E\(ep.episodeNumber). \(ep.name)")
-                                                    .font(.headline)
-                                                    .foregroundColor(.white)
-                                                if let airDate = ep.airDate {
-                                                    Text(airDate)
-                                                        .font(.caption2)
-                                                        .foregroundColor(.gray)
+                                            VStack(alignment: .leading, spacing: 6) {
+                                                HStack {
+                                                    Text("Episode \(ep.episodeNumber)")
+                                                        .font(.caption)
+                                                        .fontWeight(.black)
+                                                        .padding(.horizontal, 8)
+                                                        .padding(.vertical, 4)
+                                                        .background(Color.blue)
+                                                        .foregroundColor(.white)
+                                                        .cornerRadius(6)
+                                                    
+                                                    Text(ep.name)
+                                                        .font(.headline)
+                                                        .fontWeight(.bold)
+                                                        .foregroundColor(.white)
+                                                        .lineLimit(1)
+                                                    
+                                                    Spacer()
+                                                    
+                                                    if let rating = ep.voteAverage, rating > 0 {
+                                                        HStack(spacing: 3) {
+                                                            Image(systemName: "star.fill")
+                                                                .font(.caption2)
+                                                                .foregroundColor(.yellow)
+                                                            Text(String(format: "%.1f", rating))
+                                                                .font(.caption)
+                                                                .fontWeight(.bold)
+                                                                .foregroundColor(.yellow)
+                                                        }
+                                                    }
                                                 }
-                                            }
-                                            Spacer()
-                                            
-                                            Button(action: {
-                                                dataManager.toggleEpisodeWatched(
-                                                    tvId: show.id,
-                                                    season: selectedSeason,
-                                                    episode: ep.episodeNumber,
-                                                    showTitle: show.displayTitle,
-                                                    posterPath: show.posterPath,
-                                                    backdropPath: show.backdropPath,
-                                                    voteAverage: show.voteAverage,
-                                                    releaseDate: show.releaseDate
-                                                )
-                                            }) {
-                                                Image(systemName: isWatched ? "checkmark.circle.fill" : "circle")
-                                                    .font(.title2)
-                                                    .foregroundColor(isWatched ? .green : .gray)
-                                            }
-                                            
-                                            Button(action: {
-                                                activeEpisode = (selectedSeason, ep.episodeNumber)
-                                                isPlayerPresented = true
-                                            }) {
-                                                Image(systemName: "play.circle.fill")
-                                                    .font(.title)
-                                                    .foregroundColor(.blue)
+                                                
+                                                if let overview = ep.overview, !overview.isEmpty {
+                                                    Text(overview)
+                                                        .font(.subheadline)
+                                                        .foregroundColor(.secondary)
+                                                        .lineLimit(3)
+                                                }
+                                                
+                                                HStack(spacing: 16) {
+                                                    if let airDate = ep.airDate, !airDate.isEmpty {
+                                                        HStack(spacing: 4) {
+                                                            Image(systemName: "calendar")
+                                                                .font(.caption2)
+                                                            Text(airDate)
+                                                                .font(.caption)
+                                                        }
+                                                        .foregroundColor(.gray)
+                                                    }
+                                                    
+                                                    Spacer()
+                                                    
+                                                    // Mark Watched Toggle Button
+                                                    Button(action: {
+                                                        dataManager.toggleEpisodeWatched(
+                                                            tvId: show.id,
+                                                            season: selectedSeason,
+                                                            episode: ep.episodeNumber,
+                                                            showTitle: show.displayTitle,
+                                                            posterPath: show.posterPath,
+                                                            backdropPath: show.backdropPath,
+                                                            voteAverage: show.voteAverage,
+                                                            releaseDate: show.releaseDate
+                                                        )
+                                                    }) {
+                                                        HStack(spacing: 6) {
+                                                            Image(systemName: isWatched ? "checkmark.circle.fill" : "circle")
+                                                            Text(isWatched ? "Watched" : "Mark Watched")
+                                                        }
+                                                        .font(.caption)
+                                                        .fontWeight(.bold)
+                                                        .padding(.horizontal, 10)
+                                                        .padding(.vertical, 6)
+                                                        .background(isWatched ? Color.green.opacity(0.3) : Color.white.opacity(0.1))
+                                                        .foregroundColor(isWatched ? .green : .white)
+                                                        .cornerRadius(8)
+                                                    }
+                                                    
+                                                    // Play Episode Button
+                                                    Button(action: {
+                                                        activeEpisode = (selectedSeason, ep.episodeNumber)
+                                                        isPlayerPresented = true
+                                                    }) {
+                                                        HStack(spacing: 6) {
+                                                            Image(systemName: "play.fill")
+                                                            Text("Play")
+                                                        }
+                                                        .font(.caption)
+                                                        .fontWeight(.bold)
+                                                        .padding(.horizontal, 12)
+                                                        .padding(.vertical, 6)
+                                                        .background(LinearGradient(colors: [.blue, .cyan], startPoint: .leading, endPoint: .trailing))
+                                                        .foregroundColor(.white)
+                                                        .cornerRadius(8)
+                                                    }
+                                                }
                                             }
                                         }
                                         .padding()
