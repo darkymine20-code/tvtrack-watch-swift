@@ -35,7 +35,6 @@ public final class DataManager: ObservableObject {
         current.isWatched.toggle()
         if current.isWatched {
             current.lastWatchedDate = Date()
-            // Auto-remove from watchlist when marked as watched
             current.isWatchlist = false
         }
         items[key] = current
@@ -58,9 +57,28 @@ public final class DataManager: ObservableObject {
         saveToDisk()
     }
     
-    public func toggleEpisodeWatched(tvId: Int, season: Int, episode: Int) {
+    // Fix 5: When an episode is marked as watched, automatically save show in Watchlist
+    public func toggleEpisodeWatched(
+        tvId: Int,
+        season: Int,
+        episode: Int,
+        showTitle: String = "",
+        posterPath: String? = nil,
+        backdropPath: String? = nil,
+        voteAverage: Double? = nil,
+        releaseDate: String? = nil
+    ) {
         let key = "tv_\(tvId)"
-        guard var current = items[key] else { return }
+        var current = items[key] ?? LocalMediaItem(
+            tmdbId: tvId,
+            mediaType: "tv",
+            title: showTitle.isEmpty ? "TV Show" : showTitle,
+            posterPath: posterPath,
+            backdropPath: backdropPath,
+            voteAverage: voteAverage,
+            releaseDate: releaseDate
+        )
+        
         let epKey = "\(season)_\(episode)"
         if current.watchedEpisodes[epKey] != nil {
             current.watchedEpisodes.removeValue(forKey: epKey)
@@ -69,6 +87,8 @@ public final class DataManager: ObservableObject {
             dateFormatter.dateFormat = "yyyy-MM-dd"
             current.watchedEpisodes[epKey] = dateFormatter.string(from: Date())
             current.lastWatchedDate = Date()
+            // Fix 5: Auto-add TV show to Watchlist when an episode is marked as watched
+            current.isWatchlist = true
         }
         items[key] = current
         saveToDisk()

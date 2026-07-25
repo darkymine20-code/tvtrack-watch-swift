@@ -19,6 +19,12 @@ public struct TMDbMediaItem: Identifiable, Codable, Hashable {
         return title ?? name ?? "Untitled"
     }
     
+    // Fast lightweight thumbnail for grids & Explore carousels (Fix 4)
+    public var thumbnailURL: URL? {
+        guard let path = posterPath else { return nil }
+        return URL(string: "\(AppConfig.tmdbThumbnailBaseURL)\(path)")
+    }
+    
     public var posterURL: URL? {
         guard let path = posterPath else { return nil }
         return URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)")
@@ -193,7 +199,7 @@ public struct TMDbEpisode: Codable, Identifiable, Hashable {
     
     public var stillURL: URL? {
         guard let path = stillPath else { return nil }
-        return URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)")
+        return URL(string: "\(AppConfig.tmdbThumbnailBaseURL)\(path)")
     }
 }
 
@@ -215,7 +221,7 @@ public struct TMDbCastMember: Codable, Identifiable, Hashable {
     
     public var profileURL: URL? {
         guard let path = profilePath else { return nil }
-        return URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)")
+        return URL(string: "\(AppConfig.tmdbThumbnailBaseURL)\(path)")
     }
 }
 

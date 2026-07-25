@@ -5,8 +5,9 @@ public struct AppConfig {
     public static let traktClientId = "e52812225595b18eeae7720d8ec9322eca18708e1ae1935d0007990be9ae5388"
     
     public static let tmdbBaseURL = "https://api.themoviedb.org/3"
-    public static let tmdbImageBaseURL = "https://image.tmdb.org/t/p/w500"
-    public static let tmdbBackdropBaseURL = "https://image.tmdb.org/t/p/original"
+    public static let tmdbThumbnailBaseURL = "https://image.tmdb.org/t/p/w185" // Fast small thumbnail
+    public static let tmdbImageBaseURL = "https://image.tmdb.org/t/p/w500"     // Medium poster
+    public static let tmdbBackdropBaseURL = "https://image.tmdb.org/t/p/original" // High-res backdrop
     
     public static let traktBaseURL = "https://api.trakt.tv"
     

@@ -11,7 +11,7 @@ public struct ExploreView: View {
     @State private var totalPages = 1
     @State private var isSearchingMore = false
     
-    // Trakt Collections (Fix 3)
+    // Trakt Collections
     @State private var traktTrending: [TMDbMediaItem] = []
     @State private var traktFavorited: [TMDbMediaItem] = []
     @State private var traktWatched: [TMDbMediaItem] = []
@@ -73,7 +73,7 @@ public struct ExploreView: View {
             
             ScrollView {
                 if !searchQuery.isEmpty {
-                    // Fix 4: Infinite Paginated Search Results
+                    // Fix 3: Automatic Infinite Search Scroll
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Text("Search Results (\(searchResults.count))")
@@ -87,32 +87,29 @@ public struct ExploreView: View {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 18)], spacing: 18) {
                             ForEach(searchResults) { item in
                                 MediaCardCell(item: item)
+                                    .onAppear {
+                                        if item.id == searchResults.last?.id && currentPage < totalPages && !isSearchingMore {
+                                            loadNextSearchPage()
+                                        }
+                                    }
                             }
                         }
                         .padding(.horizontal)
                         
-                        if currentPage < totalPages {
-                            Button(action: loadNextSearchPage) {
-                                HStack {
-                                    if isSearchingMore {
-                                        ProgressView().padding(.trailing, 6)
-                                    }
-                                    Text(isSearchingMore ? "Loading Next Page..." : "Load More Search Results")
-                                        .font(.headline)
-                                        .fontWeight(.bold)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.blue.opacity(0.3))
-                                .foregroundColor(.white)
-                                .cornerRadius(12)
+                        if isSearchingMore {
+                            HStack {
+                                ProgressView()
+                                Text("Loading More Results...")
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
                             }
+                            .frame(maxWidth: .infinity)
                             .padding()
                         }
                     }
                     .padding(.top)
                 } else {
-                    // Fix 3: Trakt API Collections (Trending, Most Favorited, Most Watched, Most Played)
+                    // Trakt API Collections
                     VStack(alignment: .leading, spacing: 32) {
                         // Recommended For You
                         VStack(alignment: .leading, spacing: 12) {
@@ -128,7 +125,7 @@ public struct ExploreView: View {
                             MediaCarouselHorizontal(items: recommendedItems)
                         }
                         
-                        // Trakt Collection 1: 🔥 Trakt Trending
+                        // 🔥 Trakt Trending
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "flame.fill")
@@ -142,7 +139,7 @@ public struct ExploreView: View {
                             MediaCarouselHorizontal(items: traktTrending)
                         }
                         
-                        // Trakt Collection 2: ❤️ Trakt Most Favorited
+                        // ❤️ Trakt Most Favorited
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "heart.fill")
@@ -156,7 +153,7 @@ public struct ExploreView: View {
                             MediaCarouselHorizontal(items: traktFavorited)
                         }
                         
-                        // Trakt Collection 3: 👁️ Trakt Most Watched
+                        // 👁️ Trakt Most Watched
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "eye.fill")
@@ -170,7 +167,7 @@ public struct ExploreView: View {
                             MediaCarouselHorizontal(items: traktWatched)
                         }
                         
-                        // Trakt Collection 4: 🎮 Trakt Most Played
+                        // 🎮 Trakt Most Played
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "play.circle.fill")
@@ -296,8 +293,9 @@ public struct MediaCardCell: View {
     private var cardBody: some View {
         VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .topTrailing) {
-                if let posterURL = item.posterURL {
-                    AsyncImage(url: posterURL) { img in
+                // Fix 4: Ultra-fast thumbnail loading using thumbnailURL
+                if let imageURL = item.thumbnailURL ?? item.posterURL {
+                    AsyncImage(url: imageURL) { img in
                         img.resizable().aspectRatio(contentMode: .fill)
                     } placeholder: {
                         Rectangle().fill(Color.gray.opacity(0.3))

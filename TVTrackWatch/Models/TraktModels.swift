@@ -36,6 +36,7 @@ public struct TraktIds: Codable {
     public let tmdb: Int?
 }
 
+// Fix 2: Trakt Comment with Emoji Reaction, Likes, and Replies Count
 public struct TraktComment: Codable, Identifiable {
     public let id: Int
     public let comment: String
@@ -43,6 +44,7 @@ public struct TraktComment: Codable, Identifiable {
     public let review: Bool
     public let rating: Double?
     public let likes: Int
+    public let replies: Int?
     public let createdAt: String
     public let user: TraktUser
     
@@ -50,8 +52,16 @@ public struct TraktComment: Codable, Identifiable {
         return String(createdAt.prefix(10))
     }
     
+    public var reactionEmoji: String {
+        guard let r = rating else { return "💬" }
+        if r >= 9 { return "🔥" }
+        if r >= 7.5 { return "👍" }
+        if r >= 5.0 { return "🤔" }
+        return "👎"
+    }
+    
     enum CodingKeys: String, CodingKey {
-        case id, comment, spoiler, review, rating, likes, user
+        case id, comment, spoiler, review, rating, likes, replies, user
         case createdAt = "created_at"
     }
 }
