@@ -60,7 +60,8 @@ public struct MovieDetailsView: View {
                             imdbRating: imdbInfo?.rating ?? movie.voteAverage,
                             imdbVoteCount: imdbInfo?.voteCount ?? movie.voteCount,
                             tmdbRating: movie.voteAverage,
-                            traktRating: (movie.voteAverage ?? 8.0) * 0.95
+                            traktRating: (movie.voteAverage ?? 8.0) * 0.95,
+                            userRating: localItem?.userRating
                         )
                         
                         // Release Date & Runtime Metadata Row
@@ -156,6 +157,12 @@ public struct MovieDetailsView: View {
                             .cornerRadius(12)
                     }
                     Spacer()
+                }
+                .padding(.horizontal)
+                
+                // Interactive 10-Star Rating Bar
+                RatingWidgetView(userRating: localItem?.userRating) { newRating in
+                    dataManager.setUserRating(tmdbId: movie.id, mediaType: "movie", rating: newRating)
                 }
                 .padding(.horizontal)
                 

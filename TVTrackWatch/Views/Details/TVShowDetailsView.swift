@@ -66,7 +66,8 @@ public struct TVShowDetailsView: View {
                             imdbRating: imdbInfo?.rating ?? show.voteAverage,
                             imdbVoteCount: imdbInfo?.voteCount ?? show.voteCount,
                             tmdbRating: show.voteAverage,
-                            traktRating: (show.voteAverage ?? 8.0) * 0.95
+                            traktRating: (show.voteAverage ?? 8.0) * 0.95,
+                            userRating: localItem?.userRating
                         )
                         
                         // Live Countdown Badge for Upcoming Episode
@@ -158,6 +159,12 @@ public struct TVShowDetailsView: View {
                             .cornerRadius(12)
                     }
                     Spacer()
+                }
+                .padding(.horizontal)
+                
+                // Interactive 10-Star Rating Bar
+                RatingWidgetView(userRating: localItem?.userRating) { newRating in
+                    dataManager.setUserRating(tmdbId: show.id, mediaType: "tv", rating: newRating)
                 }
                 .padding(.horizontal)
                 

@@ -5,16 +5,48 @@ public struct RatingBarView: View {
     public let imdbVoteCount: Int?
     public let tmdbRating: Double?
     public let traktRating: Double?
+    public let userRating: Double?
     
-    public init(imdbRating: Double? = nil, imdbVoteCount: Int? = nil, tmdbRating: Double? = nil, traktRating: Double? = nil) {
+    public init(
+        imdbRating: Double? = nil,
+        imdbVoteCount: Int? = nil,
+        tmdbRating: Double? = nil,
+        traktRating: Double? = nil,
+        userRating: Double? = nil
+    ) {
         self.imdbRating = imdbRating
         self.imdbVoteCount = imdbVoteCount
         self.tmdbRating = tmdbRating
         self.traktRating = traktRating
+        self.userRating = userRating
     }
     
     public var body: some View {
         HStack(spacing: 14) {
+            if let userVote = userRating, userVote > 0 {
+                // Personal User Rating Badge
+                HStack(spacing: 6) {
+                    Text("YOU")
+                        .font(.caption2)
+                        .fontWeight(.black)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.green)
+                        .foregroundColor(.black)
+                        .cornerRadius(4)
+                    
+                    Text("★ \(String(format: "%.0f", userVote))/10")
+                        .font(.subheadline)
+                        .fontWeight(.black)
+                        .foregroundColor(.green)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.green.opacity(0.12))
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.green.opacity(0.4), lineWidth: 1))
+            }
+            
             // IMDb Badge
             HStack(spacing: 6) {
                 Text("IMDb")
