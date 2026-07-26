@@ -227,10 +227,29 @@ public final class DataManager: ObservableObject {
         )
     }
     
-    public func updatePlaybackProgress(tmdbId: Int, mediaType: String, seconds: Double) {
+    public func getPlaybackProgress(tmdbId: Int, mediaType: String, season: Int? = nil, episode: Int? = nil) -> Double {
         let key = "\(mediaType)_\(tmdbId)"
-        guard var current = items[key] else { return }
-        current.playbackProgressSeconds = seconds
+        guard let current = items[key] else { return 0.0 }
+        if mediaType == "tv", let s = season, let e = episode {
+            return current.episodeProgressSeconds["\(s)_\(e)"] ?? 0.0
+        } else {
+            return current.playbackProgressSeconds
+        }
+    }
+    
+    public func updatePlaybackProgress(tmdbId: Int, mediaType: String, seconds: Double, season: Int? = nil, episode: Int? = nil) {
+        let key = "\(mediaType)_\(tmdbId)"
+        var current = items[key] ?? LocalMediaItem(
+            tmdbId: tmdbId,
+            mediaType: mediaType,
+            title: ""
+        )
+        
+        if mediaType == "tv", let s = season, let e = episode {
+            current.episodeProgressSeconds["\(s)_\(e)"] = seconds
+        } else {
+            current.playbackProgressSeconds = seconds
+        }
         current.lastWatchedDate = Date()
         items[key] = current
         saveToDisk()

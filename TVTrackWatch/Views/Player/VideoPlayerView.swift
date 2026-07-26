@@ -73,6 +73,9 @@ public struct VideoPlayerView: View {
     @State private var activeSubtitleText: String = ""
     @State private var timeObserverToken: Any? = nil
     
+    @State private var resumeToastMessage: String? = nil
+    @State private var lastSavedProgressTime: TimeInterval = 0
+    
     @Environment(\.dismiss) var dismiss
     
     public init(title: String, tmdbId: Int, releaseYear: Int? = nil, isTV: Bool = false, seasonNumber: Int? = nil, episodeNumber: Int? = nil) {
@@ -178,6 +181,7 @@ public struct VideoPlayerView: View {
                                 resolveFlussonicURL()
                             } else {
                                 removeTimeObserver()
+                                saveCurrentProgress()
                                 avPlayer?.pause()
                                 avPlayer = nil
                                 directVideoURL = nil
@@ -206,6 +210,7 @@ public struct VideoPlayerView: View {
                 }
                 
                 Button(action: {
+                    saveCurrentProgress()
                     removeTimeObserver()
                     avPlayer?.pause()
                     dismiss()
@@ -237,25 +242,56 @@ public struct VideoPlayerView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
                     } else if let player = avPlayer {
-                        ZStack(alignment: .bottom) {
-                            VideoPlayer(player: player)
-                                .ignoresSafeArea()
-                                .onDisappear {
-                                    removeTimeObserver()
-                                    player.pause()
+                        ZStack(alignment: .top) {
+                            ZStack(alignment: .bottom) {
+                                VideoPlayer(player: player)
+                                    .ignoresSafeArea()
+                                    .onDisappear {
+                                        saveCurrentProgress()
+                                        removeTimeObserver()
+                                        player.pause()
+                                    }
+                                
+                                if !activeSubtitleText.isEmpty {
+                                    Text(activeSubtitleText)
+                                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 10)
+                                        .background(Color.black.opacity(0.8))
+                                        .cornerRadius(10)
+                                        .padding(.bottom, 60)
+                                        .shadow(radius: 6)
                                 }
+                            }
                             
-                            if !activeSubtitleText.isEmpty {
-                                Text(activeSubtitleText)
-                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                            if let toast = resumeToastMessage {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "play.circle.fill")
+                                        .foregroundColor(.blue)
+                                    Text(toast)
+                                        .font(.subheadline)
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                    Button("Start Over") {
+                                        player.seek(to: .zero)
+                                        withAnimation { resumeToastMessage = nil }
+                                    }
+                                    .font(.caption.bold())
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(Color.white.opacity(0.2))
+                                    .cornerRadius(6)
                                     .foregroundColor(.white)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 10)
-                                    .background(Color.black.opacity(0.8))
-                                    .cornerRadius(10)
-                                    .padding(.bottom, 60)
-                                    .shadow(radius: 6)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color.black.opacity(0.85))
+                                .cornerRadius(12)
+                                .padding(.top, 16)
+                                .padding(.horizontal, 24)
+                                .transition(.move(edge: .top).combined(with: .opacity))
                             }
                         }
                     } else {
@@ -337,6 +373,29 @@ public struct VideoPlayerView: View {
                 self.directVideoURL = targetURL
                 let newPlayer = AVPlayer(url: targetURL)
                 self.avPlayer = newPlayer
+                
+                // Fetch saved progress position
+                let savedProgress = DataManager.shared.getPlaybackProgress(
+                    tmdbId: tmdbId,
+                    mediaType: isTV ? "tv" : "movie",
+                    season: seasonNumber,
+                    episode: episodeNumber
+                )
+                
+                if savedProgress > 5.0 {
+                    let cmTime = CMTime(seconds: savedProgress, preferredTimescale: 600)
+                    newPlayer.seek(to: cmTime)
+                    let formatted = formatSeconds(savedProgress)
+                    self.resumeToastMessage = "Resumed from \(formatted)"
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                        withAnimation {
+                            if self.resumeToastMessage != nil {
+                                self.resumeToastMessage = nil
+                            }
+                        }
+                    }
+                }
+                
                 self.setupTimeObserver(player: newPlayer)
                 self.isResolvingFlussonic = false
                 newPlayer.play()
@@ -391,6 +450,17 @@ public struct VideoPlayerView: View {
             guard player != nil else { return }
             let currentTime = time.seconds
             self.updateActiveSubtitle(currentTime: currentTime)
+            
+            if abs(currentTime - self.lastSavedProgressTime) >= 3.0 && currentTime > 2.0 {
+                self.lastSavedProgressTime = currentTime
+                DataManager.shared.updatePlaybackProgress(
+                    tmdbId: self.tmdbId,
+                    mediaType: self.isTV ? "tv" : "movie",
+                    seconds: currentTime,
+                    season: self.seasonNumber,
+                    episode: self.episodeNumber
+                )
+            }
         }
     }
     
@@ -398,6 +468,21 @@ public struct VideoPlayerView: View {
         if let token = timeObserverToken, let player = avPlayer {
             player.removeTimeObserver(token)
             timeObserverToken = nil
+        }
+    }
+    
+    private func saveCurrentProgress() {
+        if let player = avPlayer {
+            let seconds = player.currentTime().seconds
+            if seconds > 2.0 {
+                DataManager.shared.updatePlaybackProgress(
+                    tmdbId: tmdbId,
+                    mediaType: isTV ? "tv" : "movie",
+                    seconds: seconds,
+                    season: seasonNumber,
+                    episode: episodeNumber
+                )
+            }
         }
     }
     
@@ -424,6 +509,18 @@ public struct VideoPlayerView: View {
             if !activeSubtitleText.isEmpty {
                 activeSubtitleText = ""
             }
+        }
+    }
+    
+    private func formatSeconds(_ seconds: Double) -> String {
+        let totalSeconds = Int(seconds)
+        let hrs = totalSeconds / 3600
+        let mins = (totalSeconds % 3600) / 60
+        let secs = totalSeconds % 60
+        if hrs > 0 {
+            return String(format: "%d:%02d:%02d", hrs, mins, secs)
+        } else {
+            return String(format: "%d:%02d", mins, secs)
         }
     }
 }
