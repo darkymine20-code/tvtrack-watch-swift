@@ -105,6 +105,7 @@ public struct VideoPlayerView: View {
     @State private var p2pStatusMessage = ""
     @State private var itorrentStatusMessage = ""
     @State private var activeP2PMagnetURL: String? = nil
+    @State private var activeITorrentMagnetURL: String? = nil
     @State private var showTorrentSelectionSheet = false
     @State private var avPlayer: AVPlayer? = nil
     
@@ -382,36 +383,18 @@ public struct VideoPlayerView: View {
                         .background(Color.black)
                     }
                 } else if isITorrentSelected {
-                    if isResolvingITorrent {
-                        VStack(spacing: 16) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .cyan))
-                                .scaleEffect(1.4)
-                            Text("iTorrent Native LibTorrent Core")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            Text(itorrentStatusMessage)
-                                .font(.subheadline)
-                                .foregroundColor(.cyan)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 32)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.black)
-                    } else if let player = avPlayer {
-                        renderPlayerContainer(player: player)
-                    } else if let directURL = directVideoURL {
-                        WebViewWrapper(url: directURL)
+                    if let magnet = activeITorrentMagnetURL {
+                        ITorrentStreamView(magnetURL: magnet)
                             .ignoresSafeArea()
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "bolt.horizontal.circle.fill")
                                 .font(.system(size: 44))
                                 .foregroundColor(.cyan)
-                            Text("iTorrent Core Engine Ready")
+                            Text("iTorrent P2P Engine")
                                 .font(.headline)
                                 .foregroundColor(.white)
-                            Text(itorrentStatusMessage.isEmpty ? "Select a torrent stream from the iTorrent selector." : itorrentStatusMessage)
+                            Text("Select a torrent stream to begin playback.")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -643,45 +626,13 @@ public struct VideoPlayerView: View {
     }
     
     private func processSelectedITorrentCandidate(candidate: TorrentioStreamCandidate) {
-        isResolvingITorrent = true
-        itorrentStatusMessage = "Connecting TCP/UDP BitTorrent Trackers..."
         removeTimeObserver()
         avPlayer?.pause()
         avPlayer = nil
         
-        let cleanTitle: String
-        if isTV {
-            if let index = title.range(of: " S")?.lowerBound {
-                cleanTitle = String(title[..<index])
-            } else {
-                cleanTitle = title
-            }
-        } else {
-            cleanTitle = title
-        }
-        
-        let year = releaseYear ?? Calendar.current.component(.year, from: Date())
-        
-        Task {
-            if let streamURL = await LibtorrentStreamEngine.shared.startTorrentStream(
-                magnetURL: candidate.magnetURL,
-                onStatus: { status in
-                    DispatchQueue.main.async {
-                        self.itorrentStatusMessage = status
-                    }
-                }
-            ) {
-                await MainActor.run {
-                    self.startPlayingDirectURL(targetURL: streamURL, cleanTitle: cleanTitle, year: year)
-                    self.isResolvingITorrent = false
-                }
-            } else {
-                await MainActor.run {
-                    self.itorrentStatusMessage = "Failed to stream torrent with iTorrent engine."
-                    self.isResolvingITorrent = false
-                }
-            }
-        }
+        // Set the magnet URL — ITorrentStreamView handles everything via WebTor.io
+        self.activeITorrentMagnetURL = candidate.magnetURL
+        self.isResolvingITorrent = false
     }
     
     private func resolveP2PTorrentURL() {
