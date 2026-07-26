@@ -3,62 +3,66 @@ import SwiftUI
 public struct PersonStatCardView: View {
     public let stat: PersonStat
     public let accentColor: Color
+    public let action: () -> Void
     @State private var profileURL: URL?
     
-    public init(stat: PersonStat, accentColor: Color) {
+    public init(stat: PersonStat, accentColor: Color, action: @escaping () -> Void = {}) {
         self.stat = stat
         self.accentColor = accentColor
+        self.action = action
     }
     
     public var body: some View {
-        GlassCardView {
-            HStack(spacing: 12) {
-                // Celebrity Photo Avatar from TMDb API
-                if let url = profileURL {
-                    AsyncImage(url: url) { img in
-                        img.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Circle().fill(accentColor.opacity(0.2))
-                    }
-                    .frame(width: 46, height: 46)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(accentColor.opacity(0.5), lineWidth: 1.5))
-                } else {
-                    Circle()
-                        .fill(accentColor.opacity(0.25))
+        Button(action: action) {
+            GlassCardView {
+                HStack(spacing: 12) {
+                    // Celebrity Photo Avatar from TMDb API
+                    if let url = profileURL {
+                        AsyncImage(url: url) { img in
+                            img.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Circle().fill(accentColor.opacity(0.2))
+                        }
                         .frame(width: 46, height: 46)
-                        .overlay(
-                            Text(String(stat.name.prefix(1)).uppercased())
-                                .font(.headline).fontWeight(.black)
-                                .foregroundColor(accentColor)
-                        )
-                }
-                
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(stat.name)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .lineLimit(1)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(accentColor.opacity(0.5), lineWidth: 1.5))
+                    } else {
+                        Circle()
+                            .fill(accentColor.opacity(0.25))
+                            .frame(width: 46, height: 46)
+                            .overlay(
+                                Text(String(stat.name.prefix(1)).uppercased())
+                                    .font(.headline).fontWeight(.black)
+                                    .foregroundColor(accentColor)
+                            )
+                    }
                     
-                    Text(stat.role)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(stat.name)
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        
+                        Text(stat.role)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    Text("\(stat.count) titles")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .fontWeight(.black)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(accentColor.opacity(0.3))
+                        .foregroundColor(accentColor)
+                        .cornerRadius(6)
+                        .overlay(RoundedRectangle(cornerRadius: 6).stroke(accentColor.opacity(0.4), lineWidth: 1))
                 }
-                
-                Spacer()
-                
-                Text("\(stat.count) titles")
-                    .font(.caption2)
-                    .fontWeight(.black)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(accentColor.opacity(0.3))
-                    .foregroundColor(accentColor)
-                    .cornerRadius(6)
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(accentColor.opacity(0.4), lineWidth: 1))
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
         }
         .task {
             profileURL = await TMDbService.shared.fetchPersonProfileURL(name: stat.name)
@@ -72,6 +76,7 @@ public struct TopStatsView: View {
     
     @State private var actorDisplayLimit = 6
     @State private var directorDisplayLimit = 6
+    @State private var selectedPersonName: String? = nil
     
     public init(topActors: [PersonStat], topDirectors: [PersonStat]) {
         self.topActors = topActors.filter { $0.count >= 4 }
@@ -118,12 +123,14 @@ public struct TopStatsView: View {
                         
                         let visibleActors = Array(topActors.prefix(actorDisplayLimit))
                         ForEach(visibleActors) { stat in
-                            PersonStatCardView(stat: stat, accentColor: .blue)
-                                .onAppear {
-                                    if stat.id == visibleActors.last?.id && actorDisplayLimit < topActors.count {
-                                        actorDisplayLimit += 6
-                                    }
+                            PersonStatCardView(stat: stat, accentColor: .blue) {
+                                selectedPersonName = stat.name
+                            }
+                            .onAppear {
+                                if stat.id == visibleActors.last?.id && actorDisplayLimit < topActors.count {
+                                    actorDisplayLimit += 6
                                 }
+                            }
                         }
                         
                         if actorDisplayLimit < topActors.count {
@@ -157,12 +164,14 @@ public struct TopStatsView: View {
                         
                         let visibleDirectors = Array(topDirectors.prefix(directorDisplayLimit))
                         ForEach(visibleDirectors) { stat in
-                            PersonStatCardView(stat: stat, accentColor: .purple)
-                                .onAppear {
-                                    if stat.id == visibleDirectors.last?.id && directorDisplayLimit < topDirectors.count {
-                                        directorDisplayLimit += 6
-                                    }
+                            PersonStatCardView(stat: stat, accentColor: .purple) {
+                                selectedPersonName = stat.name
+                            }
+                            .onAppear {
+                                if stat.id == visibleDirectors.last?.id && directorDisplayLimit < topDirectors.count {
+                                    directorDisplayLimit += 6
                                 }
+                            }
                         }
                         
                         if directorDisplayLimit < topDirectors.count {
@@ -185,5 +194,17 @@ public struct TopStatsView: View {
                 .padding(.horizontal)
             }
         }
+        .sheet(item: Binding(
+            get: { selectedPersonName.map { PersonNameItem(name: $0) } },
+            set: { selectedPersonName = $0?.name }
+        )) { item in
+            PersonDetailView(personName: item.name)
+        }
     }
 }
+
+public struct PersonNameItem: Identifiable {
+    public var id: String { name }
+    public let name: String
+}
+

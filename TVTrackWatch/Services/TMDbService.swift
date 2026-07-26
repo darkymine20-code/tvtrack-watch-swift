@@ -268,4 +268,55 @@ public final class TMDbService: ObservableObject {
         }
         return nil
     }
+    
+    // MARK: - Person Details & Combined Credits (Movies + TV Shows)
+    public func findPersonIdByName(name: String) async -> Int? {
+        guard let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(AppConfig.tmdbBaseURL)/search/person?api_key=\(apiKey)&query=\(encoded)") else {
+            return nil
+        }
+        do {
+            let (data, _) = try await session.data(from: url)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let results = json["results"] as? [[String: Any]],
+               let first = results.first,
+               let personId = first["id"] as? Int {
+                return personId
+            }
+        } catch {
+            print("Error finding person ID for \(name): \(error)")
+        }
+        return nil
+    }
+    
+    public func fetchPersonDetails(personId: Int) async throws -> TMDbPersonDetails {
+        let urlString = "\(AppConfig.tmdbBaseURL)/person/\(personId)?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+        let (data, _) = try await session.data(from: url)
+        return try JSONDecoder().decode(TMDbPersonDetails.self, from: data)
+    }
+    
+    public func fetchPersonCombinedCredits(personId: Int) async throws -> [TMDbMediaItem] {
+        let urlString = "\(AppConfig.tmdbBaseURL)/person/\(personId)/combined_credits?api_key=\(apiKey)"
+        guard let url = URL(string: urlString) else { throw URLError(.badURL) }
+        let (data, _) = try await session.data(from: url)
+        let response = try JSONDecoder().decode(TMDbPersonCombinedCreditsResponse.self, from: data)
+        var items: [TMDbMediaItem] = []
+        if let cast = response.cast {
+            items.append(contentsOf: cast)
+        }
+        if let crew = response.crew {
+            items.append(contentsOf: crew)
+        }
+        var unique: [Int: TMDbMediaItem] = [:]
+        for item in items {
+            unique[item.id] = item
+        }
+        return Array(unique.values).sorted {
+            let year0 = $0.releaseDate ?? $0.firstAirDate ?? ""
+            let year1 = $1.releaseDate ?? $1.firstAirDate ?? ""
+            return year0 > year1
+        }
+    }
 }
+

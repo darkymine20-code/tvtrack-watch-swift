@@ -18,6 +18,7 @@ public struct TVShowDetailsView: View {
     @State private var seasonDetails: TMDbSeasonDetails?
     @State private var isPlayerPresented = false
     @State private var activeEpisode: (season: Int, episode: Int)?
+    @State private var selectedPerson: TMDbCastMember? = nil
     @State private var currentDate = Date()
     
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -191,34 +192,36 @@ public struct TVShowDetailsView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 16) {
                                 ForEach(cast.prefix(15)) { member in
-                                    VStack(alignment: .center, spacing: 6) {
-                                        if let profileURL = member.profileURL {
-                                            AsyncImage(url: profileURL) { img in
-                                                img.resizable().aspectRatio(contentMode: .fill)
-                                            } placeholder: {
-                                                Circle().fill(Color.gray.opacity(0.3))
-                                            }
-                                            .frame(width: 70, height: 70)
-                                            .clipShape(Circle())
-                                        } else {
-                                            Circle()
-                                                .fill(Color.gray.opacity(0.3))
+                                    Button(action: { selectedPerson = member }) {
+                                        VStack(alignment: .center, spacing: 6) {
+                                            if let profileURL = member.profileURL {
+                                                AsyncImage(url: profileURL) { img in
+                                                    img.resizable().aspectRatio(contentMode: .fill)
+                                                } placeholder: {
+                                                    Circle().fill(Color.gray.opacity(0.3))
+                                                }
                                                 .frame(width: 70, height: 70)
-                                        }
-                                        
-                                        Text(member.name)
-                                            .font(.caption).fontWeight(.bold)
-                                            .lineLimit(1)
-                                            .foregroundColor(.white)
-                                        
-                                        if let character = member.character {
-                                            Text(character)
-                                                .font(.caption2)
-                                                .foregroundColor(.gray)
+                                                .clipShape(Circle())
+                                            } else {
+                                                Circle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .frame(width: 70, height: 70)
+                                            }
+                                            
+                                            Text(member.name)
+                                                .font(.caption).fontWeight(.bold)
                                                 .lineLimit(1)
+                                                .foregroundColor(.white)
+                                            
+                                            if let character = member.character {
+                                                Text(character)
+                                                    .font(.caption2)
+                                                    .foregroundColor(.gray)
+                                                    .lineLimit(1)
+                                            }
                                         }
+                                        .frame(width: 90)
                                     }
-                                    .frame(width: 90)
                                 }
                             }
                             .padding(.horizontal)
@@ -476,6 +479,9 @@ public struct TVShowDetailsView: View {
                     episodeNumber: ep.episode
                 )
             }
+        }
+        .sheet(item: $selectedPerson) { member in
+            PersonDetailView(personName: member.name, personId: member.id)
         }
         .task {
             loadTVDetails()

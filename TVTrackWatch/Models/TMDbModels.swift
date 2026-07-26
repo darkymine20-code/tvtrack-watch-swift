@@ -308,3 +308,33 @@ public struct TMDbVideo: Codable, Identifiable {
     public let site: String
     public let type: String
 }
+
+// MARK: - Person & Combined Credits Models
+public struct TMDbPersonDetails: Codable, Identifiable {
+    public let id: Int
+    public let name: String
+    public let biography: String?
+    public let birthday: String?
+    public let placeOfBirth: String?
+    public let profilePath: String?
+    public let knownForDepartment: String?
+    public let popularity: Double?
+    
+    enum CodingKeys: String, CodingKey {
+        case id, name, biography, birthday, popularity
+        case placeOfBirth = "place_of_birth"
+        case profilePath = "profile_path"
+        case knownForDepartment = "known_for_department"
+    }
+    
+    public var profileURL: URL? {
+        guard let path = profilePath else { return nil }
+        return URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)")
+    }
+}
+
+public struct TMDbPersonCombinedCreditsResponse: Codable {
+    public let cast: [TMDbMediaItem]?
+    public let crew: [TMDbMediaItem]?
+}
+
