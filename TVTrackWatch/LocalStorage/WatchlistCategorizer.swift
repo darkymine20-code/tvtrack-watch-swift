@@ -27,13 +27,16 @@ public final class WatchlistCategorizer {
         
         for item in tvItems {
             let watchedCount = item.watchedEpisodes.count
+            let released = item.releasedEpisodes ?? item.totalEpisodes ?? 0
+            let isAllAiredWatched = (released > 0 && watchedCount >= released)
             
             if watchedCount == 0 {
                 haveNotStarted.append(item)
+            } else if item.isWatched || isAllAiredWatched {
+                // User has watched all currently released/aired episodes! Move to "Waiting for New Episodes"
+                waitingForNewEpisodes.append(item)
             } else if let lastWatched = item.lastWatchedDate, now.timeIntervalSince(lastWatched) > thirtyDaysSeconds {
                 notWatched30Days.append(item)
-            } else if item.isWatched {
-                waitingForNewEpisodes.append(item)
             } else {
                 watchNext.append(item)
             }
