@@ -31,6 +31,15 @@ public struct TVShowDetailsView: View {
         dataManager.getLocalItem(tmdbId: show.id, mediaType: "tv")
     }
     
+    private var displayGenreNames: [String] {
+        if let genres = details?.genres, !genres.isEmpty {
+            return genres.map { $0.name }
+        } else if let ids = show.genreIds, !ids.isEmpty {
+            return ids.compactMap { TMDbMediaItem.genreDictionary[$0] }
+        }
+        return []
+    }
+    
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -135,6 +144,28 @@ public struct TVShowDetailsView: View {
                         }
                     }
                     .padding(24)
+                }
+                
+                // Genre Badges Row
+                if !displayGenreNames.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(displayGenreNames, id: \.self) { genre in
+                                Text(genre)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 7)
+                                    .background(
+                                        LinearGradient(colors: [Color.purple.opacity(0.4), Color.blue.opacity(0.4)], startPoint: .leading, endPoint: .trailing)
+                                    )
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.25), lineWidth: 1))
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
                 }
                 
                 // Action Buttons Bar
