@@ -40,6 +40,34 @@ public struct TMDbMediaItem: Identifiable, Codable, Hashable {
         return String(dateStr.prefix(4))
     }
 
+    public init(
+        id: Int,
+        title: String? = nil,
+        name: String? = nil,
+        overview: String? = nil,
+        posterPath: String? = nil,
+        backdropPath: String? = nil,
+        voteAverage: Double? = nil,
+        voteCount: Int? = nil,
+        releaseDate: String? = nil,
+        firstAirDate: String? = nil,
+        mediaType: String? = nil,
+        genreIds: [Int]? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.name = name
+        self.overview = overview
+        self.posterPath = posterPath
+        self.backdropPath = backdropPath
+        self.voteAverage = voteAverage
+        self.voteCount = voteCount
+        self.releaseDate = releaseDate
+        self.firstAirDate = firstAirDate
+        self.mediaType = mediaType
+        self.genreIds = genreIds
+    }
+    
     enum CodingKeys: String, CodingKey {
         case id, title, name, overview
         case posterPath = "poster_path"
