@@ -77,6 +77,37 @@ public final class DataManager: ObservableObject {
         saveToDisk()
     }
     
+    private func evaluateShowWatchlistState(item: inout LocalMediaItem) {
+        guard item.mediaType == "tv" else { return }
+        
+        let watchedCount = item.watchedEpisodes.count
+        let released = item.releasedEpisodes ?? item.totalEpisodes ?? 0
+        let status = item.status ?? ""
+        let isEndedOrCanceled = status == "Ended" || status == "Canceled" || status == "Ended / Finished"
+        
+        if released > 0 && watchedCount >= released {
+            item.isWatched = true
+            if isEndedOrCanceled {
+                // Show is finished (e.g. Death Note 37/37) -> Remove from Watchlist into Watched TV Shows (Profile)
+                item.isWatchlist = false
+            } else {
+                // Show is ongoing (e.g. Silo 24/24) -> Keep in Watchlist under Waiting for New Episodes
+                item.isWatchlist = true
+            }
+        } else if released > 0 && watchedCount < released {
+            // Unwatched released episodes exist -> Active Watchlist item
+            item.isWatched = false
+            item.isWatchlist = true
+        } else if watchedCount > 0 {
+            if isEndedOrCanceled {
+                item.isWatched = true
+                item.isWatchlist = false
+            } else {
+                item.isWatchlist = true
+            }
+        }
+    }
+    
     public func updateEpisodeCounts(tmdbId: Int, totalEpisodes: Int?, releasedEpisodes: Int?, status: String? = nil) {
         let key = "tv_\(tmdbId)"
         guard var current = items[key] else { return }
@@ -86,33 +117,12 @@ public final class DataManager: ObservableObject {
             current.status = s
         }
         
-        let activeStatus = current.status ?? status ?? ""
-        let isEndedOrCanceled = activeStatus == "Ended" || activeStatus == "Canceled" || activeStatus == "Ended / Finished"
-        
-        if let released = releasedEpisodes, released > 0 {
-            let watchedCount = current.watchedEpisodes.count
-            if watchedCount < released {
-                // Show has new released episodes -> Bring back to Watchlist automatically!
-                current.isWatched = false
-                current.isWatchlist = true
-            } else {
-                // All released episodes have been watched
-                current.isWatched = true
-                if isEndedOrCanceled {
-                    // Show is no longer airing / finished -> Remove from Watchlist and keep in Watched TV Shows (Profile)
-                    current.isWatchlist = false
-                } else {
-                    // Show is still ongoing (Returning Series) -> Keep in Watchlist under "Waiting for New Episodes"
-                    current.isWatchlist = true
-                }
-            }
-        }
+        evaluateShowWatchlistState(item: &current)
         
         items[key] = current
         saveToDisk()
     }
     
-    // Fix 5: When an episode is marked as watched, automatically save show in Watchlist
     public func toggleEpisodeWatched(
         tvId: Int,
         season: Int,
@@ -142,9 +152,9 @@ public final class DataManager: ObservableObject {
             dateFormatter.dateFormat = "yyyy-MM-dd"
             current.watchedEpisodes[epKey] = dateFormatter.string(from: Date())
             current.lastWatchedDate = Date()
-            // Fix 5: Auto-add TV show to Watchlist when an episode is marked as watched
-            current.isWatchlist = true
         }
+        
+        evaluateShowWatchlistState(item: &current)
         items[key] = current
         saveToDisk()
     }
@@ -180,7 +190,7 @@ public final class DataManager: ObservableObject {
         }
         
         current.lastWatchedDate = Date()
-        current.isWatchlist = true
+        evaluateShowWatchlistState(item: &current)
         items[key] = current
         saveToDisk()
     }

@@ -16,7 +16,17 @@ public final class WatchlistCategorizer {
         waitingForNewEpisodes: [LocalMediaItem],
         haveNotStarted: [LocalMediaItem]
     ) {
-        let tvItems = items.filter { $0.mediaType == "tv" && $0.isWatchlist && !$0.isStoppedWatching }
+        let tvItems = items.filter { item in
+            guard item.mediaType == "tv" && item.isWatchlist && !item.isStoppedWatching else { return false }
+            let watchedCount = item.watchedEpisodes.count
+            let released = item.releasedEpisodes ?? item.totalEpisodes ?? 0
+            let status = item.status ?? ""
+            let isEndedOrCanceled = status == "Ended" || status == "Canceled" || status == "Ended / Finished"
+            if isEndedOrCanceled && (item.isWatched || (released > 0 && watchedCount >= released)) {
+                return false
+            }
+            return true
+        }
         let now = Date()
         let thirtyDaysSeconds: TimeInterval = 30 * 24 * 60 * 60
         
