@@ -74,8 +74,8 @@ public struct TopStatsView: View {
     public let topActors: [PersonStat]
     public let topDirectors: [PersonStat]
     
-    @State private var actorDisplayLimit = 6
-    @State private var directorDisplayLimit = 6
+    @State private var actorDisplayLimit = 4
+    @State private var directorDisplayLimit = 4
     @State private var selectedPersonName: String? = nil
     
     public init(topActors: [PersonStat], topDirectors: [PersonStat]) {
@@ -128,15 +128,21 @@ public struct TopStatsView: View {
                             }
                             .onAppear {
                                 if stat.id == visibleActors.last?.id && actorDisplayLimit < topActors.count {
-                                    actorDisplayLimit += 6
+                                    withAnimation {
+                                        actorDisplayLimit += 4
+                                    }
                                 }
                             }
                         }
                         
                         if actorDisplayLimit < topActors.count {
-                            Button(action: { actorDisplayLimit += 6 }) {
+                            Button(action: {
+                                withAnimation {
+                                    actorDisplayLimit += 4
+                                }
+                            }) {
                                 HStack {
-                                    Text("Expand More (\(topActors.count - actorDisplayLimit))")
+                                    Text("Show More (\(topActors.count - actorDisplayLimit) remaining)")
                                     Image(systemName: "chevron.down")
                                 }
                                 .font(.caption).fontWeight(.bold)
@@ -169,15 +175,21 @@ public struct TopStatsView: View {
                             }
                             .onAppear {
                                 if stat.id == visibleDirectors.last?.id && directorDisplayLimit < topDirectors.count {
-                                    directorDisplayLimit += 6
+                                    withAnimation {
+                                        directorDisplayLimit += 4
+                                    }
                                 }
                             }
                         }
                         
                         if directorDisplayLimit < topDirectors.count {
-                            Button(action: { directorDisplayLimit += 6 }) {
+                            Button(action: {
+                                withAnimation {
+                                    directorDisplayLimit += 4
+                                }
+                            }) {
                                 HStack {
-                                    Text("Expand More (\(topDirectors.count - directorDisplayLimit))")
+                                    Text("Show More (\(topDirectors.count - directorDisplayLimit) remaining)")
                                     Image(systemName: "chevron.down")
                                 }
                                 .font(.caption).fontWeight(.bold)
