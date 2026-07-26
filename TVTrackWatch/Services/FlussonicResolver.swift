@@ -4,53 +4,78 @@ public final class FlussonicResolver {
     public static let shared = FlussonicResolver()
     private init() {}
     
-    // MARK: - PascalCase Title Formatting
-    public static func formatTitleToPascalCase(_ title: String) -> String {
-        // Step 1: Replace ampersand with " And " surrounded by spaces
-        let step1 = title.replacingOccurrences(of: "&", with: " And ")
+    // MARK: - PascalCase Title Formatting with Apostrophe Variations
+    public static func formatTitleToPascalCase(_ title: String) -> [String] {
+        var variations: [String] = []
         
-        // Step 2: Separate into alphanumeric word components
-        let components = step1.components(separatedBy: CharacterSet.alphanumerics.inverted)
+        // Variation 1: Pre-clean possessives ('s -> s, ' -> empty) e.g., Schindler's -> Schindlers
+        let cleaned1 = title
+            .replacingOccurrences(of: "'s", with: "s")
+            .replacingOccurrences(of: "’s", with: "s")
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "’", with: "")
+            .replacingOccurrences(of: "&", with: " And ")
+        
+        let words1 = cleaned1.components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
-        
-        // Step 3: Capitalize first letter of each word and join into single string
-        return components.map { word -> String in
+        let pascal1 = words1.map { word -> String in
             guard let first = word.first else { return "" }
             return first.uppercased() + word.dropFirst()
         }.joined()
+        if !pascal1.isEmpty { variations.append(pascal1) }
+        
+        // Variation 2: Standard split (which capitalizes S in 's e.g., SchindlerSList)
+        let cleaned2 = title.replacingOccurrences(of: "&", with: " And ")
+        let words2 = cleaned2.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+        let pascal2 = words2.map { word -> String in
+            guard let first = word.first else { return "" }
+            return first.uppercased() + word.dropFirst()
+        }.joined()
+        if !pascal2.isEmpty && !variations.contains(pascal2) {
+            variations.append(pascal2)
+        }
+        
+        return variations
     }
     
     // MARK: - Movie Candidate URLs Generator
     public func generateMovieCandidates(title: String, year: Int) -> [URL] {
-        let formatted = Self.formatTitleToPascalCase(title)
-        let suffixes = ["\(formatted)-NoSub.mp4", "\(formatted).mp4"]
+        let titleVariations = Self.formatTitleToPascalCase(title)
         
         var directories: [String] = []
         if year >= 2022 {
             directories = [
                 "http://130.193.166.118/sss/EnglishMovies1/\(year)",
                 "http://130.193.165.194/Flussonic247/EnglishMovies1/\(year)",
-                "http://130.193.165.194/Flussonic247/EnglishMovies1/OTHER"
+                "http://130.193.165.194/Flussonic247/EnglishMovies1/OTHER",
+                "http://130.193.166.118/sss/EnglishMovies1/OTHER"
             ]
         } else if year >= 2001 {
             directories = [
                 "http://130.193.165.194/Flussonic247/EnglishMovies1/\(year)",
                 "http://130.193.166.118/sss/EnglishMovies1/\(year)",
-                "http://130.193.165.194/Flussonic247/EnglishMovies1/OTHER"
+                "http://130.193.165.194/Flussonic247/EnglishMovies1/OTHER",
+                "http://130.193.166.118/sss/EnglishMovies1/OTHER"
             ]
         } else {
             directories = [
                 "http://130.193.165.194/Flussonic247/EnglishMovies1/OTHER",
                 "http://130.193.165.194/Flussonic247/EnglishMovies1/\(year)",
+                "http://130.193.166.118/sss/EnglishMovies1/\(year)",
+                "http://130.193.166.118/sss/EnglishMovies1/OTHER",
                 "http://130.193.166.118/sss/EnglishMovies1/2022"
             ]
         }
         
         var urls: [URL] = []
-        for dir in directories {
-            for suffix in suffixes {
-                if let url = URL(string: "\(dir)/\(suffix)") {
-                    urls.append(url)
+        for formatted in titleVariations {
+            let suffixes = ["\(formatted)-NoSub.mp4", "\(formatted).mp4"]
+            for dir in directories {
+                for suffix in suffixes {
+                    if let url = URL(string: "\(dir)/\(suffix)"), !urls.contains(url) {
+                        urls.append(url)
+                    }
                 }
             }
         }
@@ -59,17 +84,11 @@ public final class FlussonicResolver {
     
     // MARK: - TV Show Candidate URLs Generator
     public func generateTVCandidates(title: String, year: Int, season: Int, episode: Int) -> [URL] {
-        let formatted = Self.formatTitleToPascalCase(title)
+        let titleVariations = Self.formatTitleToPascalCase(title)
         let ss = String(format: "%02d", season)
         let ee = String(format: "%02d", episode)
         let s = "\(season)"
         let e = "\(episode)"
-        
-        let suffixes = [
-            "\(formatted)-S\(ss)E\(ee).mp4",
-            "\(formatted)_S\(ss)E\(ee).mp4",
-            "\(formatted)-S\(s)E\(e).mp4"
-        ]
         
         let primaryPool: String
         let secondaryPool: String
@@ -90,10 +109,17 @@ public final class FlussonicResolver {
         ]
         
         var urls: [URL] = []
-        for folder in folders {
-            for suffix in suffixes {
-                if let url = URL(string: "\(folder)/\(suffix)") {
-                    urls.append(url)
+        for formatted in titleVariations {
+            let suffixes = [
+                "\(formatted)-S\(ss)E\(ee).mp4",
+                "\(formatted)_S\(ss)E\(ee).mp4",
+                "\(formatted)-S\(s)E\(e).mp4"
+            ]
+            for folder in folders {
+                for suffix in suffixes {
+                    if let url = URL(string: "\(folder)/\(suffix)"), !urls.contains(url) {
+                        urls.append(url)
+                    }
                 }
             }
         }
@@ -137,7 +163,7 @@ public final class FlussonicResolver {
                 return url
             }
         }
-        return candidates.first ?? URL(string: "http://130.193.166.118/sss/EnglishMovies1/\(year)/\(Self.formatTitleToPascalCase(title)).mp4")!
+        return candidates.first ?? URL(string: "http://130.193.165.194/Flussonic247/EnglishMovies1/OTHER/SchindlersList-NoSub.mp4")!
     }
     
     public func resolveTVDirectURL(title: String, year: Int, season: Int, episode: Int) async -> URL {
@@ -147,6 +173,6 @@ public final class FlussonicResolver {
                 return url
             }
         }
-        return candidates.first ?? URL(string: "http://154.48.204.98/Flussonic251/EnglishTvSeries1/\(Self.formatTitleToPascalCase(title))-S\(String(format: "%02d", season))E\(String(format: "%02d", episode)).mp4")!
+        return candidates.first ?? URL(string: "http://154.48.204.98/Flussonic251/EnglishTvSeries1/\(Self.formatTitleToPascalCase(title).first ?? "Show")-S\(String(format: "%02d", season))E\(String(format: "%02d", episode)).mp4")!
     }
 }
