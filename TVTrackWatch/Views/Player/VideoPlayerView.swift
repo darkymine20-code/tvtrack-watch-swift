@@ -102,6 +102,7 @@ public struct VideoPlayerView: View {
     @State private var isResolvingP2P = false
     @State private var seedrStatusMessage = ""
     @State private var p2pStatusMessage = ""
+    @State private var activeP2PMagnetURL: String? = nil
     @State private var showTorrentSelectionSheet = false
     @State private var avPlayer: AVPlayer? = nil
     
@@ -389,20 +390,18 @@ public struct VideoPlayerView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
-                    } else if let player = avPlayer {
-                        renderPlayerContainer(player: player)
-                    } else if let directURL = directVideoURL {
-                        WebViewWrapper(url: directURL)
+                    } else if let magnet = activeP2PMagnetURL {
+                        WebTorrentPlayerView(magnetURL: magnet)
                             .ignoresSafeArea()
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 44))
                                 .foregroundColor(.green)
-                            Text("Direct P2P Torrent Stream Failed.")
+                            Text("Direct P2P Torrent Engine Ready")
                                 .font(.headline)
                                 .foregroundColor(.white)
-                            Text(p2pStatusMessage.isEmpty ? "Could not connect to P2P torrent peers." : p2pStatusMessage)
+                            Text("Select a torrent stream from the P2P stream selector menu.")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -597,8 +596,6 @@ public struct VideoPlayerView: View {
     }
     
     private func processSelectedP2PCandidate(candidate: TorrentioStreamCandidate) {
-        isResolvingP2P = true
-        p2pStatusMessage = "Connecting to P2P Swarm..."
         removeTimeObserver()
         avPlayer?.pause()
         avPlayer = nil
@@ -616,27 +613,10 @@ public struct VideoPlayerView: View {
         
         let year = releaseYear ?? Calendar.current.component(.year, from: Date())
         
-        Task {
-            if let streamURL = await LocalTorrentStreamer.shared.streamTorrentDirectly(
-                magnetURL: candidate.magnetURL,
-                title: cleanTitle,
-                onProgress: { status in
-                    DispatchQueue.main.async {
-                        self.p2pStatusMessage = status
-                    }
-                }
-            ) {
-                await MainActor.run {
-                    self.startPlayingDirectURL(targetURL: streamURL, cleanTitle: cleanTitle, year: year)
-                    self.isResolvingP2P = false
-                }
-            } else {
-                await MainActor.run {
-                    self.p2pStatusMessage = "Failed to stream P2P torrent directly."
-                    self.isResolvingP2P = false
-                }
-            }
-        }
+        self.activeP2PMagnetURL = candidate.magnetURL
+        self.isResolvingP2P = false
+        
+        resolveAllSubtitles(targetURL: nil, cleanTitle: cleanTitle, year: year)
     }
     
     private func processSelectedTorrentCandidate(candidate: TorrentioStreamCandidate) {
