@@ -43,8 +43,19 @@ public struct ExploreView: View {
     @State private var filterMediaType = "movie"
     
     @State private var selectedSectionForDetail: String?
+    @AppStorage("explore_hide_watched") private var hideWatched = false
     
     public init() {}
+    
+    private func filterWatchedIfNeeded(_ items: [TMDbMediaItem]) -> [TMDbMediaItem] {
+        if !hideWatched {
+            return items
+        }
+        return items.filter { item in
+            let key = "\(item.mediaType ?? "movie")_\(item.id)"
+            return dataManager.items[key]?.isWatched != true
+        }
+    }
     
     private func getSectionItems(
         sectionType: String,
@@ -53,11 +64,13 @@ public struct ExploreView: View {
         tv: [TMDbMediaItem]
     ) -> [TMDbMediaItem] {
         let active = sectionType != "all" ? sectionType : globalMediaType
+        let result: [TMDbMediaItem]
         switch active {
-        case "movie": return movies.isEmpty ? mixed.filter { $0.mediaType == "movie" } : movies
-        case "tv": return tv.isEmpty ? mixed.filter { $0.mediaType == "tv" } : tv
-        default: return mixed
+        case "movie": result = movies.isEmpty ? mixed.filter { $0.mediaType == "movie" } : movies
+        case "tv": result = tv.isEmpty ? mixed.filter { $0.mediaType == "tv" } : tv
+        default: result = mixed
         }
+        return filterWatchedIfNeeded(result)
     }
     
     public var body: some View {
@@ -97,12 +110,34 @@ public struct ExploreView: View {
                         }
                         .font(.subheadline)
                         .fontWeight(.bold)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, 14)
                         .padding(.vertical, 12)
                         .background(LinearGradient(colors: [.blue, .purple], startPoint: .leading, endPoint: .trailing))
                         .foregroundColor(.white)
                         .cornerRadius(14)
                         .shadow(color: .blue.opacity(0.4), radius: 6)
+                    }
+                    
+                    Button(action: {
+                        withAnimation {
+                            hideWatched.toggle()
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: hideWatched ? "eye.slash.fill" : "eye.fill")
+                            Text(hideWatched ? "Watched: Hidden" : "Hide Watched")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(hideWatched ? Color.green.opacity(0.3) : Color.white.opacity(0.1))
+                        .foregroundColor(hideWatched ? .green : .white)
+                        .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(hideWatched ? Color.green.opacity(0.7) : Color.white.opacity(0.2), lineWidth: 1)
+                        )
                     }
                 }
                 
@@ -121,10 +156,10 @@ public struct ExploreView: View {
             
             ScrollView {
                 if !searchQuery.isEmpty {
-                    // Fix 3: Automatic Infinite Search Scroll
+                    let displaySearchResults = filterWatchedIfNeeded(searchResults)
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            Text("Search Results (\(searchResults.count))")
+                            Text("Search Results (\(displaySearchResults.count))")
                                 .font(.title2).fontWeight(.black)
                             Spacer()
                             Text("Page \(currentPage) of \(totalPages)")
@@ -133,7 +168,7 @@ public struct ExploreView: View {
                         .padding(.horizontal)
                         
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 18)], spacing: 18) {
-                            ForEach(searchResults) { item in
+                            ForEach(displaySearchResults) { item in
                                 MediaCardCell(item: item)
                                     .onAppear {
                                         if item.id == searchResults.last?.id && currentPage < totalPages && !isSearchingMore {
@@ -549,6 +584,8 @@ struct SectionIdentifiable: Identifiable {
 public struct ExploreSectionDetailView: View {
     public let sectionTitle: String
     @Environment(\.presentationMode) var presentationMode
+    @ObservedObject var dataManager = DataManager.shared
+    @AppStorage("explore_hide_watched") private var hideWatched = false
     
     @State private var selectedMediaType = "all"
     @State private var items: [TMDbMediaItem] = []
@@ -561,17 +598,45 @@ public struct ExploreSectionDetailView: View {
         self.sectionTitle = sectionTitle
     }
     
+    private var displayItems: [TMDbMediaItem] {
+        if !hideWatched {
+            return items
+        }
+        return items.filter { item in
+            let key = "\(item.mediaType ?? "movie")_\(item.id)"
+            return dataManager.items[key]?.isWatched != true
+        }
+    }
+    
     public var body: some View {
         NavigationView {
             VStack(spacing: 0) {
                 // Section Sub-header & Filter Bar
                 VStack(spacing: 12) {
-                    Picker("Media Type", selection: $selectedMediaType) {
-                        Text("✨ All Catalog").tag("all")
-                        Text("🎬 Movies Only").tag("movie")
-                        Text("📺 TV Shows Only").tag("tv")
+                    HStack {
+                        Picker("Media Type", selection: $selectedMediaType) {
+                            Text("✨ All Catalog").tag("all")
+                            Text("🎬 Movies Only").tag("movie")
+                            Text("📺 TV Shows Only").tag("tv")
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        
+                        Button(action: {
+                            withAnimation {
+                                hideWatched.toggle()
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: hideWatched ? "eye.slash.fill" : "eye.fill")
+                                Text(hideWatched ? "Hidden" : "Hide Watched")
+                            }
+                            .font(.caption).fontWeight(.bold)
+                            .padding(.horizontal, 10).padding(.vertical, 8)
+                            .background(hideWatched ? Color.green.opacity(0.3) : Color.white.opacity(0.1))
+                            .foregroundColor(hideWatched ? .green : .white)
+                            .cornerRadius(8)
+                        }
                     }
-                    .pickerStyle(SegmentedPickerStyle())
                     .onChange(of: selectedMediaType) { _ in
                         currentPage = 1
                         loadPage(1, append: false)
@@ -586,13 +651,13 @@ public struct ExploreSectionDetailView: View {
                         .font(.headline)
                         .foregroundColor(.gray)
                     Spacer()
-                } else if items.isEmpty {
+                } else if displayItems.isEmpty {
                     Spacer()
                     VStack(spacing: 12) {
                         Image(systemName: "film.stack")
                             .font(.system(size: 48))
                             .foregroundColor(.gray)
-                        Text("No titles found in this catalog.")
+                        Text("No unwatched titles found in this catalog.")
                             .font(.headline)
                             .foregroundColor(.gray)
                     }
@@ -601,7 +666,7 @@ public struct ExploreSectionDetailView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
                             HStack {
-                                Text("\(items.count) Titles Loaded")
+                                Text("\(displayItems.count) Titles Loaded")
                                     .font(.subheadline)
                                     .fontWeight(.bold)
                                     .foregroundColor(.secondary)
@@ -613,7 +678,7 @@ public struct ExploreSectionDetailView: View {
                             .padding(.horizontal)
                             
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 18)], spacing: 18) {
-                                ForEach(items) { item in
+                                ForEach(displayItems) { item in
                                     MediaCardCell(item: item)
                                         .onAppear {
                                             if item.id == items.last?.id && currentPage < totalPages && !isLoadingMore {

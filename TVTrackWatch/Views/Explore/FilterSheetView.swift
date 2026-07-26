@@ -5,6 +5,7 @@ public struct FilterSheetView: View {
     @Binding var selectedYear: String
     @Binding var minRating: Double
     @Binding var mediaType: String // "movie" or "tv"
+    @AppStorage("explore_hide_watched") private var hideWatched = false
     
     @Environment(\.dismiss) var dismiss
     
@@ -58,6 +59,10 @@ public struct FilterSheetView: View {
                         }
                         Slider(value: $minRating, in: 0...10, step: 0.5)
                     }
+                }
+                
+                Section(header: Text("Preferences")) {
+                    Toggle("Hide Watched Items", isOn: $hideWatched)
                 }
             }
             .navigationTitle("Filter Catalog")
