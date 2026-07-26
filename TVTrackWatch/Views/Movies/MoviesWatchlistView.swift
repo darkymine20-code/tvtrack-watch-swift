@@ -62,6 +62,9 @@ public struct MoviesWatchlistView: View {
                 }
             }
         }
+        .onAppear {
+            dataManager.fetchMissingCreditsForWatchedItems()
+        }
     }
 }
 

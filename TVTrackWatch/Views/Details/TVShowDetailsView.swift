@@ -562,7 +562,17 @@ public struct TVShowDetailsView: View {
                 
                 let castNames = det.credits?.cast.prefix(10).map { $0.name } ?? []
                 let directorNames = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
-                dataManager.updateCreditsInfo(tmdbId: show.id, mediaType: "tv", castNames: Array(castNames), directorNames: Array(directorNames))
+                dataManager.updateMediaMetadata(
+                    tmdbId: show.id,
+                    mediaType: "tv",
+                    title: det.name,
+                    posterPath: det.posterPath,
+                    backdropPath: det.backdropPath,
+                    voteAverage: det.voteAverage,
+                    releaseDate: det.firstAirDate,
+                    castNames: Array(castNames),
+                    directorNames: Array(directorNames)
+                )
                 
                 // Calculate total released episodes count
                 let formatter = DateFormatter()

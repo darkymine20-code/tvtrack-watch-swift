@@ -450,7 +450,17 @@ public struct MovieDetailsView: View {
                 
                 let castNames = det.credits?.cast.prefix(10).map { $0.name } ?? []
                 let directorNames = det.credits?.crew.filter { $0.job == "Director" }.map { $0.name } ?? []
-                dataManager.updateCreditsInfo(tmdbId: movie.id, mediaType: "movie", castNames: Array(castNames), directorNames: Array(directorNames))
+                dataManager.updateMediaMetadata(
+                    tmdbId: movie.id,
+                    mediaType: "movie",
+                    title: det.title,
+                    posterPath: det.posterPath,
+                    backdropPath: det.backdropPath,
+                    voteAverage: det.voteAverage,
+                    releaseDate: det.releaseDate,
+                    castNames: Array(castNames),
+                    directorNames: Array(directorNames)
+                )
                 
                 var resolvedId = det.imdbId
                 if resolvedId == nil || resolvedId!.isEmpty {

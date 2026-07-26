@@ -19,6 +19,7 @@ public final class DataManager: ObservableObject {
         current.isWatchlist.toggle()
         items[key] = current
         saveToDisk()
+        checkAndRepairMetadataIfNeeded(item: current)
     }
     
     public func toggleFavorite(item: TMDbMediaItem, castNames: [String] = [], directorNames: [String] = []) {
@@ -27,6 +28,7 @@ public final class DataManager: ObservableObject {
         current.isFavorite.toggle()
         items[key] = current
         saveToDisk()
+        checkAndRepairMetadataIfNeeded(item: current)
     }
     
     public func toggleWatched(item: TMDbMediaItem, castNames: [String] = [], directorNames: [String] = []) {
@@ -39,6 +41,7 @@ public final class DataManager: ObservableObject {
         }
         items[key] = current
         saveToDisk()
+        checkAndRepairMetadataIfNeeded(item: current)
     }
     
     public func toggleStoppedWatching(tmdbId: Int, mediaType: String) {
@@ -217,7 +220,7 @@ public final class DataManager: ObservableObject {
     public func fetchMissingCreditsForWatchedItems() {
         Task {
             let targets = items.values.filter {
-                $0.isWatched || !$0.watchedEpisodes.isEmpty || $0.isWatchlist || $0.title == "Movie" || $0.title == "TV Show" || $0.title == "Title" || $0.posterPath == nil
+                $0.title == "Movie" || $0.title == "TV Show" || $0.title == "Title" || $0.title == "Untitled" || $0.title.isEmpty || $0.posterPath == nil || $0.posterPath?.isEmpty == true || (($0.isWatched || $0.isWatchlist) && $0.castNames.isEmpty)
             }
             for item in targets {
                 do {
@@ -291,6 +294,50 @@ public final class DataManager: ObservableObject {
         return items["\(mediaType)_\(tmdbId)"]
     }
     
+    public func checkAndRepairMetadataIfNeeded(item: LocalMediaItem) {
+        if item.title == "Movie" || item.title == "TV Show" || item.title == "Title" || item.title == "Untitled" || item.title.isEmpty || item.posterPath == nil || item.posterPath?.isEmpty == true {
+            Task {
+                if item.mediaType == "tv" {
+                    if let det = try? await TMDbService.shared.fetchTVDetails(id: item.tmdbId) {
+                        let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
+                        let directors = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
+                        await MainActor.run {
+                            self.updateMediaMetadata(
+                                tmdbId: item.tmdbId,
+                                mediaType: "tv",
+                                title: det.name,
+                                posterPath: det.posterPath,
+                                backdropPath: det.backdropPath,
+                                voteAverage: det.voteAverage,
+                                releaseDate: det.firstAirDate,
+                                castNames: Array(cast),
+                                directorNames: Array(directors)
+                            )
+                        }
+                    }
+                } else {
+                    if let det = try? await TMDbService.shared.fetchMovieDetails(id: item.tmdbId) {
+                        let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
+                        let directors = det.credits?.crew.filter { $0.job == "Director" }.map { $0.name } ?? []
+                        await MainActor.run {
+                            self.updateMediaMetadata(
+                                tmdbId: item.tmdbId,
+                                mediaType: "movie",
+                                title: det.title,
+                                posterPath: det.posterPath,
+                                backdropPath: det.backdropPath,
+                                voteAverage: det.voteAverage,
+                                releaseDate: det.releaseDate,
+                                castNames: Array(cast),
+                                directorNames: Array(directors)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     // MARK: - Disk Persistence
     private func saveToDisk() {
         do {
@@ -306,6 +353,7 @@ public final class DataManager: ObservableObject {
         do {
             let decoded = try JSONDecoder().decode([String: LocalMediaItem].self, from: data)
             self.items = decoded
+            fetchMissingCreditsForWatchedItems()
         } catch {
             print("Failed to load DataManager from disk: \(error)")
         }
