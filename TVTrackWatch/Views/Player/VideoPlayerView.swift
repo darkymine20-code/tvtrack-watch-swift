@@ -766,7 +766,7 @@ public struct VideoPlayerView: View {
         self.directVideoURL = targetURL
         
         let pathExt = targetURL.pathExtension.lowercased()
-        let isAVPlayerCompatible = targetURL.absoluteString.contains("m3u8") || ["mp4", "m4v", "mov", "m3u8"].contains(pathExt)
+        let isAVPlayerCompatible = targetURL.absoluteString.contains("127.0.0.1") || targetURL.absoluteString.contains("localhost") || targetURL.absoluteString.contains("m3u8") || ["mp4", "m4v", "mov", "m3u8"].contains(pathExt)
         
         if isAVPlayerCompatible {
             let headers: [String: String] = [
