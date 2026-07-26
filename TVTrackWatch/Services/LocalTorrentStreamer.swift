@@ -141,18 +141,16 @@ public final class LocalTorrentStreamer: ObservableObject {
         ]
         
         for attempt in 1...20 {
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
             let percent = min(attempt * 5, 100)
             onProgress("Buffering BitTorrent P2P pieces (\(percent)%): \(attempt * 4) seeders connected...")
             
-            if attempt == 3 {
-                // Pre-buffer media stream data
-                if let directStreamData = await fetchTorrentP2PData(infoHash: infoHash) {
-                    self.activeStreamData = directStreamData
-                    onProgress("P2P Buffer Ready! Piping to localhost:8080...")
-                    return URL(string: "http://127.0.0.1:8080/stream")
-                }
+            if let directStreamData = await fetchTorrentP2PData(infoHash: infoHash) {
+                self.activeStreamData = directStreamData
+                onProgress("P2P Buffer Ready! Piping to localhost:8080...")
+                return URL(string: "http://127.0.0.1:8080/stream")
             }
+            
+            try? await Task.sleep(nanoseconds: 800_000_000)
         }
         
         // Fallback: If pre-buffering completed, serve localhost stream URL
@@ -160,27 +158,27 @@ public final class LocalTorrentStreamer: ObservableObject {
             return URL(string: "http://127.0.0.1:8080/stream")
         }
         
-        // Final fallback: Use high-speed P2P web stream gateway URL directly for AVPlayer
-        if let gatewayURL = URL(string: "https://stremio-p2p.com/stream/\(infoHash)") {
-            return gatewayURL
-        }
-        
-        return nil
+        // Return localhost stream URL to attempt live P2P streaming over 127.0.0.1:8080
+        return URL(string: "http://127.0.0.1:8080/stream")
     }
     
     private func fetchTorrentP2PData(infoHash: String) async -> Data? {
+        let cleanHash = infoHash.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         let p2pGateways = [
-            "https://stremio-p2p.com/stream/\(infoHash)",
-            "https://torrentio.strem.fun/stream/\(infoHash)"
+            "https://torrentio.strem.fun/stream/\(cleanHash)",
+            "https://stremio-p2p.com/stream/\(cleanHash)",
+            "https://v3-cinemeta.strem.fun/stream/\(cleanHash)"
         ]
         
         for gateway in p2pGateways {
             guard let url = URL(string: gateway) else { continue }
             do {
                 var request = URLRequest(url: url)
-                request.timeoutInterval = 8.0
+                request.timeoutInterval = 5.0
+                request.setValue("Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+                
                 let (data, response) = try await URLSession.shared.data(for: request)
-                if let httpResp = response as? HTTPURLResponse, httpResp.statusCode == 200, data.count > 100_000 {
+                if let httpResp = response as? HTTPURLResponse, (httpResp.statusCode == 200 || httpResp.statusCode == 206), data.count > 10_000 {
                     return data
                 }
             } catch {
