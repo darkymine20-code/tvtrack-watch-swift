@@ -74,8 +74,8 @@ public struct TopStatsView: View {
     public let topActors: [PersonStat]
     public let topDirectors: [PersonStat]
     
-    @State private var actorDisplayLimit = 6
-    @State private var directorDisplayLimit = 6
+    @State private var actorDisplayLimit = 5
+    @State private var directorDisplayLimit = 5
     @State private var selectedPersonName: String? = nil
     
     public init(topActors: [PersonStat], topDirectors: [PersonStat]) {
@@ -126,25 +126,16 @@ public struct TopStatsView: View {
                             PersonStatCardView(stat: stat, accentColor: .blue) {
                                 selectedPersonName = stat.name
                             }
-                            .onAppear {
-                                if stat.id == visibleActors.last?.id && actorDisplayLimit < topActors.count {
-                                    DispatchQueue.main.async {
-                                        withAnimation {
-                                            actorDisplayLimit += 6
-                                        }
-                                    }
-                                }
-                            }
                         }
                         
                         if actorDisplayLimit < topActors.count {
                             Button(action: {
                                 withAnimation {
-                                    actorDisplayLimit += 6
+                                    actorDisplayLimit += 5
                                 }
                             }) {
                                 HStack {
-                                    Text("Show More (\(topActors.count - actorDisplayLimit) remaining)")
+                                    Text("Show More Actors (\(topActors.count - actorDisplayLimit) remaining)")
                                     Image(systemName: "chevron.down")
                                 }
                                 .font(.caption).fontWeight(.bold)
@@ -175,25 +166,16 @@ public struct TopStatsView: View {
                             PersonStatCardView(stat: stat, accentColor: .purple) {
                                 selectedPersonName = stat.name
                             }
-                            .onAppear {
-                                if stat.id == visibleDirectors.last?.id && directorDisplayLimit < topDirectors.count {
-                                    DispatchQueue.main.async {
-                                        withAnimation {
-                                            directorDisplayLimit += 6
-                                        }
-                                    }
-                                }
-                            }
                         }
                         
                         if directorDisplayLimit < topDirectors.count {
                             Button(action: {
                                 withAnimation {
-                                    directorDisplayLimit += 6
+                                    directorDisplayLimit += 5
                                 }
                             }) {
                                 HStack {
-                                    Text("Show More (\(topDirectors.count - directorDisplayLimit) remaining)")
+                                    Text("Show More Directors (\(topDirectors.count - directorDisplayLimit) remaining)")
                                     Image(systemName: "chevron.down")
                                 }
                                 .font(.caption).fontWeight(.bold)
