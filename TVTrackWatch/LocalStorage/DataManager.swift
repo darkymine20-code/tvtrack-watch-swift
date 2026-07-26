@@ -167,22 +167,50 @@ public final class DataManager: ObservableObject {
     
     public func fetchMissingCreditsForWatchedItems() {
         Task {
-            let targets = items.values.filter { ($0.isWatched || !$0.watchedEpisodes.isEmpty) && $0.castNames.isEmpty }
+            let targets = items.values.filter { $0.isWatched || !$0.watchedEpisodes.isEmpty || $0.isWatchlist }
             for item in targets {
                 do {
                     if item.mediaType == "tv" {
                         let det = try await TMDbService.shared.fetchTVDetails(id: item.tmdbId)
-                        let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
-                        let directors = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
-                        updateCreditsInfo(tmdbId: item.tmdbId, mediaType: "tv", castNames: Array(cast), directorNames: Array(directors))
-                    } else {
+                        if item.castNames.isEmpty {
+                            let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
+                            let directors = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
+                            updateCreditsInfo(tmdbId: item.tmdbId, mediaType: "tv", castNames: Array(cast), directorNames: Array(directors))
+                        }
+                        
+                        // Calculate released episodes
+                        var releasedCount = 0
+                        if let lastEp = det.lastEpisodeToAir, let lastSeason = lastEp.seasonNumber, let lastEpNum = lastEp.episodeNumber {
+                            if let seasons = det.seasons {
+                                for season in seasons where season.seasonNumber > 0 && season.seasonNumber < lastSeason {
+                                    releasedCount += season.episodeCount ?? 0
+                                }
+                            }
+                            releasedCount += lastEpNum
+                        } else if det.status == "Ended" {
+                            releasedCount = det.numberOfEpisodes ?? 0
+                        } else if let seasons = det.seasons {
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "yyyy-MM-dd"
+                            let todayStr = formatter.string(from: Date())
+                            for season in seasons where season.seasonNumber > 0 {
+                                if let date = season.airDate, !date.isEmpty, date <= todayStr {
+                                    releasedCount += season.episodeCount ?? 0
+                                }
+                            }
+                        }
+                        if releasedCount == 0, let total = det.numberOfEpisodes {
+                            releasedCount = total
+                        }
+                        updateEpisodeCounts(tmdbId: item.tmdbId, totalEpisodes: det.numberOfEpisodes, releasedEpisodes: releasedCount)
+                    } else if item.castNames.isEmpty {
                         let det = try await TMDbService.shared.fetchMovieDetails(id: item.tmdbId)
                         let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
                         let directors = det.credits?.crew.filter { $0.job == "Director" }.map { $0.name } ?? []
                         updateCreditsInfo(tmdbId: item.tmdbId, mediaType: "movie", castNames: Array(cast), directorNames: Array(directors))
                     }
                 } catch {
-                    print("Failed pre-fetching credits for \(item.title): \(error)")
+                    print("Failed pre-fetching details for \(item.title): \(error)")
                 }
             }
         }

@@ -51,6 +51,9 @@ public struct TVShowsWatchlistView: View {
                 UpcomingCalendarView(watchlistItems: Array(dataManager.items.values).filter { $0.mediaType == "tv" && $0.isWatchlist })
             }
         }
+        .task {
+            dataManager.fetchMissingCreditsForWatchedItems()
+        }
     }
 }
 
@@ -111,10 +114,13 @@ struct TVShowPosterCard: View {
         if let released = item.releasedEpisodes, released > 0 {
             return max(watchedCount, released)
         }
-        if let total = item.totalEpisodes, total > 0 {
-            return max(watchedCount, total)
+        if watchedCount > 0 {
+            return watchedCount
         }
-        return max(watchedCount, 1)
+        if let total = item.totalEpisodes, total > 0 {
+            return total
+        }
+        return 1
     }
     
     private var progressRatio: Double {

@@ -136,6 +136,7 @@ public struct TMDbTVDetails: Codable, Identifiable {
     public let status: String?
     public let numberOfSeasons: Int?
     public let numberOfEpisodes: Int?
+    public let lastEpisodeToAir: TMDbNextEpisode?
     public let nextEpisodeToAir: TMDbNextEpisode?
     public let seasons: [TMDbSeasonSummary]?
     public let genres: [TMDbGenre]?
@@ -153,6 +154,7 @@ public struct TMDbTVDetails: Codable, Identifiable {
         case lastAirDate = "last_air_date"
         case numberOfSeasons = "number_of_seasons"
         case numberOfEpisodes = "number_of_episodes"
+        case lastEpisodeToAir = "last_episode_to_air"
         case nextEpisodeToAir = "next_episode_to_air"
         case externalIds = "external_ids"
     }
