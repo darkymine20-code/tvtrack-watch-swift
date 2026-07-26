@@ -351,8 +351,9 @@ public final class SeedrTorrentResolver {
             
             let videoExtensions = [".mp4", ".mkv", ".avi", ".mov", ".m4v"]
             
-            var bestFileId: Int? = nil
             var maxFileSize: Int64 = 0
+            var bestHLSURL: URL? = nil
+            var bestFileId: Int? = nil
             
             for file in files {
                 guard let name = file["name"] as? String else { continue }
@@ -364,10 +365,23 @@ public final class SeedrTorrentResolver {
                     if size >= maxFileSize {
                         maxFileSize = size
                         bestFileId = file["folder_file_id"] as? Int ?? file["id"] as? Int
+                        
+                        if let pres = file["presentation_urls"] as? [String: Any],
+                           let videoPres = pres["video"] as? [String: Any],
+                           let hlsStr = videoPres["hls"] as? String,
+                           let hlsURL = URL(string: hlsStr) {
+                            bestHLSURL = hlsURL
+                        }
                     }
                 }
             }
             
+            // 1. Primary: Use Seedr native HLS stream URL (.m3u8) for 100% AVPlayer compatibility
+            if let hlsURL = bestHLSURL {
+                return hlsURL
+            }
+            
+            // 2. Fallback: Use direct file download URL via func=fetch_file
             if let fileId = bestFileId {
                 let resourceURL = URL(string: "https://www.seedr.cc/oauth_test/resource.php")!
                 var req = URLRequest(url: resourceURL)
