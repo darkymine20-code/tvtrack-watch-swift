@@ -63,6 +63,8 @@ public struct VideoPlayerView: View {
     
     @State private var directVideoURL: URL? = nil
     @State private var isResolvingFlussonic = false
+    @State private var isResolvingSeedr = false
+    @State private var seedrStatusMessage = ""
     @State private var avPlayer: AVPlayer? = nil
     
     @State private var kurdishSubtitleURL: URL? = nil
@@ -89,6 +91,10 @@ public struct VideoPlayerView: View {
     
     public var isFlussonicSelected: Bool {
         streamingEngine.selectedServer.name.contains("Flussonic") || streamingEngine.selectedServer.movieURLTemplate == "flussonic_direct"
+    }
+    
+    public var isTorrentioSeedrSelected: Bool {
+        streamingEngine.selectedServer.name.contains("Seedr") || streamingEngine.selectedServer.movieURLTemplate == "torrentio_seedr"
     }
     
     public var currentStreamURL: URL? {
@@ -179,6 +185,8 @@ public struct VideoPlayerView: View {
                             streamingEngine.selectServer(server)
                             if server.name.contains("Flussonic") || server.movieURLTemplate == "flussonic_direct" {
                                 resolveFlussonicURL()
+                            } else if server.name.contains("Seedr") || server.movieURLTemplate == "torrentio_seedr" {
+                                resolveSeedrTorrentURL()
                             } else {
                                 removeTimeObserver()
                                 saveCurrentProgress()
@@ -242,58 +250,7 @@ public struct VideoPlayerView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
                     } else if let player = avPlayer {
-                        ZStack(alignment: .top) {
-                            ZStack(alignment: .bottom) {
-                                VideoPlayer(player: player)
-                                    .ignoresSafeArea()
-                                    .onDisappear {
-                                        saveCurrentProgress()
-                                        removeTimeObserver()
-                                        player.pause()
-                                    }
-                                
-                                if !activeSubtitleText.isEmpty {
-                                    Text(activeSubtitleText)
-                                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 10)
-                                        .background(Color.black.opacity(0.8))
-                                        .cornerRadius(10)
-                                        .padding(.bottom, 60)
-                                        .shadow(radius: 6)
-                                }
-                            }
-                            
-                            if let toast = resumeToastMessage {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "play.circle.fill")
-                                        .foregroundColor(.blue)
-                                    Text(toast)
-                                        .font(.subheadline)
-                                        .foregroundColor(.white)
-                                    Spacer()
-                                    Button("Start Over") {
-                                        player.seek(to: .zero)
-                                        withAnimation { resumeToastMessage = nil }
-                                    }
-                                    .font(.caption.bold())
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 4)
-                                    .background(Color.white.opacity(0.2))
-                                    .cornerRadius(6)
-                                    .foregroundColor(.white)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Color.black.opacity(0.85))
-                                .cornerRadius(12)
-                                .padding(.top, 16)
-                                .padding(.horizontal, 24)
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                            }
-                        }
+                        renderPlayerContainer(player: player)
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "exclamationmark.triangle.fill")
@@ -303,6 +260,40 @@ public struct VideoPlayerView: View {
                                 .font(.headline)
                                 .foregroundColor(.white)
                             Text("Switching to embed servers...")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black)
+                    }
+                } else if isTorrentioSeedrSelected {
+                    if isResolvingSeedr {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .purple))
+                                .scaleEffect(1.4)
+                            Text("Torrentio + Seedr Cloud Engine")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text(seedrStatusMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.purple)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black)
+                    } else if let player = avPlayer {
+                        renderPlayerContainer(player: player)
+                    } else {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 44))
+                                .foregroundColor(.purple)
+                            Text("Seedr stream resolution failed.")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text(seedrStatusMessage.isEmpty ? "No torrent < 2.9 GB available." : seedrStatusMessage)
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
@@ -330,6 +321,64 @@ public struct VideoPlayerView: View {
         .onAppear {
             if isFlussonicSelected {
                 resolveFlussonicURL()
+            } else if isTorrentioSeedrSelected {
+                resolveSeedrTorrentURL()
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func renderPlayerContainer(player: AVPlayer) -> some View {
+        ZStack(alignment: .top) {
+            ZStack(alignment: .bottom) {
+                VideoPlayer(player: player)
+                    .ignoresSafeArea()
+                    .onDisappear {
+                        saveCurrentProgress()
+                        removeTimeObserver()
+                        player.pause()
+                    }
+                
+                if !activeSubtitleText.isEmpty {
+                    Text(activeSubtitleText)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Color.black.opacity(0.8))
+                        .cornerRadius(10)
+                        .padding(.bottom, 60)
+                        .shadow(radius: 6)
+                }
+            }
+            
+            if let toast = resumeToastMessage {
+                HStack(spacing: 12) {
+                    Image(systemName: "play.circle.fill")
+                        .foregroundColor(.blue)
+                    Text(toast)
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                    Spacer()
+                    Button("Start Over") {
+                        player.seek(to: .zero)
+                        withAnimation { resumeToastMessage = nil }
+                    }
+                    .font(.caption.bold())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.2))
+                    .cornerRadius(6)
+                    .foregroundColor(.white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.black.opacity(0.85))
+                .cornerRadius(12)
+                .padding(.top, 16)
+                .padding(.horizontal, 24)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
     }
@@ -370,39 +419,148 @@ public struct VideoPlayerView: View {
             }
             
             await MainActor.run {
-                self.directVideoURL = targetURL
-                let newPlayer = AVPlayer(url: targetURL)
-                self.avPlayer = newPlayer
-                
-                // Fetch saved progress position
-                let savedProgress = DataManager.shared.getPlaybackProgress(
-                    tmdbId: tmdbId,
-                    mediaType: isTV ? "tv" : "movie",
-                    season: seasonNumber,
-                    episode: episodeNumber
-                )
-                
-                if savedProgress > 5.0 {
-                    let cmTime = CMTime(seconds: savedProgress, preferredTimescale: 600)
-                    newPlayer.seek(to: cmTime)
-                    let formatted = formatSeconds(savedProgress)
-                    self.resumeToastMessage = "Resumed from \(formatted)"
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-                        withAnimation {
-                            if self.resumeToastMessage != nil {
-                                self.resumeToastMessage = nil
-                            }
-                        }
-                    }
-                }
-                
-                self.setupTimeObserver(player: newPlayer)
-                self.isResolvingFlussonic = false
-                newPlayer.play()
+                self.startPlayingDirectURL(targetURL: targetURL, cleanTitle: cleanTitle, year: year)
+            }
+        }
+    }
+    
+    private func resolveSeedrTorrentURL() {
+        isResolvingSeedr = true
+        seedrStatusMessage = "Authenticating with Seedr Cloud..."
+        removeTimeObserver()
+        avPlayer?.pause()
+        avPlayer = nil
+        
+        let cleanTitle: String
+        if isTV {
+            if let index = title.range(of: " S")?.lowerBound {
+                cleanTitle = String(title[..<index])
+            } else {
+                cleanTitle = title
+            }
+        } else {
+            cleanTitle = title
+        }
+        
+        let year = releaseYear ?? Calendar.current.component(.year, from: Date())
+        
+        Task {
+            // Fetch IMDb ID if needed
+            var resolvedImdbId = await TMDbService.shared.fetchIMDbId(mediaType: isTV ? "tv" : "movie", id: tmdbId) ?? ""
+            if resolvedImdbId.isEmpty {
+                resolvedImdbId = "tt\(tmdbId)"
             }
             
-            resolveFlussonicSubtitles(targetURL: targetURL, cleanTitle: cleanTitle, year: year)
+            await MainActor.run {
+                self.seedrStatusMessage = "Checking if \(cleanTitle) already exists on Seedr..."
+            }
+            
+            guard let token = await SeedrTorrentResolver.shared.getSeedrAccessToken() else {
+                await MainActor.run {
+                    self.seedrStatusMessage = "Failed to authenticate with Seedr account."
+                    self.isResolvingSeedr = false
+                }
+                return
+            }
+            
+            // Rule: Check if exact movie/show exists in Seedr account
+            if let existingURL = await SeedrTorrentResolver.shared.checkExistingStream(token: token, title: cleanTitle) {
+                await MainActor.run {
+                    self.seedrStatusMessage = "Found in Seedr Cloud! Loading stream..."
+                    self.startPlayingDirectURL(targetURL: existingURL, cleanTitle: cleanTitle, year: year)
+                }
+                return
+            }
+            
+            // Rule: Fetch candidate torrents <= 2.9 GB from Torrentio
+            await MainActor.run {
+                self.seedrStatusMessage = "Searching Torrentio for torrents <= 2.9 GB..."
+            }
+            
+            let candidates = await SeedrTorrentResolver.shared.fetchTorrentioCandidates(
+                imdbId: resolvedImdbId,
+                isTV: isTV,
+                season: seasonNumber,
+                episode: episodeNumber
+            )
+            
+            guard let best = candidates.first else {
+                await MainActor.run {
+                    self.seedrStatusMessage = "No torrents <= 2.9 GB found on Torrentio."
+                    self.isResolvingSeedr = false
+                }
+                return
+            }
+            
+            // Rule: Wipe out Seedr account to make space
+            await MainActor.run {
+                self.seedrStatusMessage = "Wiping Seedr storage to make space (3GB)..."
+            }
+            await SeedrTorrentResolver.shared.wipeSeedrAccount(token: token)
+            
+            // Rule: Send selected torrent magnet
+            await MainActor.run {
+                self.seedrStatusMessage = "Sending torrent (\(formatSizeBytes(best.sizeBytes))) to Seedr..."
+            }
+            let added = await SeedrTorrentResolver.shared.addMagnetToSeedr(token: token, magnetURL: best.magnetURL)
+            guard added else {
+                await MainActor.run {
+                    self.seedrStatusMessage = "Failed to add torrent to Seedr."
+                    self.isResolvingSeedr = false
+                }
+                return
+            }
+            
+            // Rule: Poll Seedr until ready & play stream
+            await MainActor.run {
+                self.seedrStatusMessage = "Downloading/converting stream on Seedr..."
+            }
+            
+            if let directURL = await SeedrTorrentResolver.shared.pollForStreamURL(token: token) {
+                await MainActor.run {
+                    self.startPlayingDirectURL(targetURL: directURL, cleanTitle: cleanTitle, year: year)
+                }
+            } else {
+                await MainActor.run {
+                    self.seedrStatusMessage = "Seedr conversion timed out."
+                    self.isResolvingSeedr = false
+                }
+            }
         }
+    }
+    
+    private func startPlayingDirectURL(targetURL: URL, cleanTitle: String, year: Int) {
+        self.directVideoURL = targetURL
+        let newPlayer = AVPlayer(url: targetURL)
+        self.avPlayer = newPlayer
+        
+        let savedProgress = DataManager.shared.getPlaybackProgress(
+            tmdbId: tmdbId,
+            mediaType: isTV ? "tv" : "movie",
+            season: seasonNumber,
+            episode: episodeNumber
+        )
+        
+        if savedProgress > 5.0 {
+            let cmTime = CMTime(seconds: savedProgress, preferredTimescale: 600)
+            newPlayer.seek(to: cmTime)
+            let formatted = formatSeconds(savedProgress)
+            self.resumeToastMessage = "Resumed from \(formatted)"
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                withAnimation {
+                    if self.resumeToastMessage != nil {
+                        self.resumeToastMessage = nil
+                    }
+                }
+            }
+        }
+        
+        self.setupTimeObserver(player: newPlayer)
+        self.isResolvingFlussonic = false
+        self.isResolvingSeedr = false
+        newPlayer.play()
+        
+        resolveFlussonicSubtitles(targetURL: targetURL, cleanTitle: cleanTitle, year: year)
     }
     
     private func resolveFlussonicSubtitles(targetURL: URL?, cleanTitle: String, year: Int) {
@@ -521,6 +679,16 @@ public struct VideoPlayerView: View {
             return String(format: "%d:%02d:%02d", hrs, mins, secs)
         } else {
             return String(format: "%d:%02d", mins, secs)
+        }
+    }
+    
+    private func formatSizeBytes(_ bytes: Int64) -> String {
+        let gb = Double(bytes) / (1024.0 * 1024.0 * 1024.0)
+        if gb >= 1.0 {
+            return String(format: "%.2f GB", gb)
+        } else {
+            let mb = Double(bytes) / (1024.0 * 1024.0)
+            return String(format: "%.0f MB", mb)
         }
     }
 }
