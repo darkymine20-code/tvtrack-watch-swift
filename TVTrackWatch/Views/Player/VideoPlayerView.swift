@@ -15,15 +15,50 @@ public struct WebViewWrapper: UIViewRepresentable {
     public func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
         let webView = WKWebView(frame: .zero, configuration: config)
+        webView.isOpaque = false
         webView.backgroundColor = .black
-        webView.load(URLRequest(url: url))
+        webView.scrollView.backgroundColor = .black
+        
+        loadContent(into: webView, targetURL: url)
         return webView
     }
     
     public func updateUIView(_ uiView: WKWebView, context: Context) {
         if uiView.url != url {
-            uiView.load(URLRequest(url: url))
+            loadContent(into: uiView, targetURL: url)
+        }
+    }
+    
+    private func loadContent(into webView: WKWebView, targetURL: URL) {
+        let ext = targetURL.pathExtension.lowercased()
+        let isDirectMedia = targetURL.host?.contains("seedr") == true || ["mp4", "mkv", "avi", "mov", "m4v", "webm"].contains(ext)
+        
+        if isDirectMedia {
+            let html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body, html { width: 100%; height: 100%; background-color: #000000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+                video { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; background-color: #000000; }
+            </style>
+            </head>
+            <body>
+                <video controls autoplay playsinline webkit-playsinline name="media">
+                    <source src="\(targetURL.absoluteString)">
+                </video>
+            </body>
+            </html>
+            """
+            webView.loadHTMLString(html, baseURL: targetURL)
+        } else {
+            var request = URLRequest(url: targetURL)
+            request.setValue("Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+            webView.load(request)
         }
     }
 }
@@ -528,7 +563,12 @@ public struct VideoPlayerView: View {
         let isAVPlayerCompatible = ["mp4", "m4v", "mov", "m3u8"].contains(pathExt)
         
         if isAVPlayerCompatible {
-            let newPlayer = AVPlayer(url: targetURL)
+            let headers: [String: String] = [
+                "User-Agent": "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+            ]
+            let asset = AVURLAsset(url: targetURL, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+            let item = AVPlayerItem(asset: asset)
+            let newPlayer = AVPlayer(playerItem: item)
             self.avPlayer = newPlayer
             
             let savedProgress = DataManager.shared.getPlaybackProgress(
