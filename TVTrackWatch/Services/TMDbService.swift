@@ -92,6 +92,58 @@ public final class TMDbService: ObservableObject {
         return items
     }
     
+    // MARK: - Section Catalog Pagination for Explore "See All"
+    public func fetchSectionMediaPaginated(section: String, mediaType: String, page: Int = 1) async throws -> (items: [TMDbMediaItem], totalPages: Int) {
+        if mediaType == "all" {
+            async let movies = fetchSectionMediaPaginated(section: section, mediaType: "movie", page: page)
+            async let tvShows = fetchSectionMediaPaginated(section: section, mediaType: "tv", page: page)
+            let (mRes, tRes) = (try await movies, try await tvShows)
+            var combined: [TMDbMediaItem] = []
+            let maxCount = max(mRes.items.count, tRes.items.count)
+            for i in 0..<maxCount {
+                if i < mRes.items.count { combined.append(mRes.items[i]) }
+                if i < tRes.items.count { combined.append(tRes.items[i]) }
+            }
+            return (combined, max(mRes.totalPages, tRes.totalPages))
+        }
+        
+        let endpoint: String
+        let sectionLower = section.lowercased()
+        if sectionLower.contains("trending") {
+            endpoint = mediaType == "movie" ? "trending/movie/week" : "trending/tv/week"
+        } else if sectionLower.contains("favorited") || sectionLower.contains("favorite") {
+            endpoint = mediaType == "movie" ? "movie/top_rated" : "tv/top_rated"
+        } else if sectionLower.contains("watched") {
+            endpoint = mediaType == "movie" ? "movie/popular" : "tv/popular"
+        } else if sectionLower.contains("played") {
+            endpoint = mediaType == "movie" ? "movie/now_playing" : "tv/on_the_air"
+        } else {
+            endpoint = mediaType == "movie" ? "trending/movie/week" : "trending/tv/week"
+        }
+        
+        let urlString = "\(AppConfig.tmdbBaseURL)/\(endpoint)?api_key=\(apiKey)&page=\(page)"
+        guard let url = URL(string: urlString) else { return ([], 0) }
+        let (data, _) = try await session.data(from: url)
+        let response = try JSONDecoder().decode(TMDbResponse<TMDbMediaItem>.self, from: data)
+        let items = response.results.map { item in
+            TMDbMediaItem(
+                id: item.id,
+                title: item.title,
+                name: item.name,
+                overview: item.overview,
+                posterPath: item.posterPath,
+                backdropPath: item.backdropPath,
+                voteAverage: item.voteAverage,
+                voteCount: item.voteCount,
+                releaseDate: item.releaseDate,
+                firstAirDate: item.firstAirDate,
+                mediaType: item.mediaType ?? mediaType,
+                genreIds: item.genreIds
+            )
+        }
+        return (items, response.totalPages ?? 1)
+    }
+    
     // MARK: - Details & Credits
     public func fetchMovieDetails(id: Int) async throws -> TMDbMovieDetails {
         let urlString = "\(AppConfig.tmdbBaseURL)/movie/\(id)?api_key=\(apiKey)&append_to_response=credits,videos"

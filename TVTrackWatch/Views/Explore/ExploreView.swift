@@ -42,6 +42,8 @@ public struct ExploreView: View {
     @State private var minRating = 0.0
     @State private var filterMediaType = "movie"
     
+    @State private var selectedSectionForDetail: String?
+    
     public init() {}
     
     private func getSectionItems(
@@ -165,6 +167,18 @@ public struct ExploreView: View {
                                 Text("Recommended For You")
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
+                                
+                                Button(action: { selectedSectionForDetail = "Recommended For You" }) {
+                                    HStack(spacing: 4) {
+                                        Text("See All").font(.subheadline).fontWeight(.bold)
+                                        Image(systemName: "chevron.right").font(.caption).fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.cyan)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .cornerRadius(8)
+                                }
                             }
                             .padding(.horizontal)
                             
@@ -181,13 +195,25 @@ public struct ExploreView: View {
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
                                 
+                                Button(action: { selectedSectionForDetail = "Trakt Trending" }) {
+                                    HStack(spacing: 4) {
+                                        Text("See All").font(.subheadline).fontWeight(.bold)
+                                        Image(systemName: "chevron.right").font(.caption).fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.cyan)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .cornerRadius(8)
+                                }
+                                
                                 Picker("Trending Filter", selection: $trendingMediaType) {
                                     Text("All").tag("all")
                                     Text("Movies").tag("movie")
                                     Text("TV Shows").tag("tv")
                                 }
                                 .pickerStyle(SegmentedPickerStyle())
-                                .frame(width: 210)
+                                .frame(width: 180)
                             }
                             .padding(.horizontal)
                             
@@ -204,13 +230,25 @@ public struct ExploreView: View {
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
                                 
+                                Button(action: { selectedSectionForDetail = "Trakt Most Favorited" }) {
+                                    HStack(spacing: 4) {
+                                        Text("See All").font(.subheadline).fontWeight(.bold)
+                                        Image(systemName: "chevron.right").font(.caption).fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.cyan)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .cornerRadius(8)
+                                }
+                                
                                 Picker("Favorited Filter", selection: $favoritedMediaType) {
                                     Text("All").tag("all")
                                     Text("Movies").tag("movie")
                                     Text("TV Shows").tag("tv")
                                 }
                                 .pickerStyle(SegmentedPickerStyle())
-                                .frame(width: 210)
+                                .frame(width: 180)
                             }
                             .padding(.horizontal)
                             
@@ -227,13 +265,25 @@ public struct ExploreView: View {
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
                                 
+                                Button(action: { selectedSectionForDetail = "Trakt Most Watched" }) {
+                                    HStack(spacing: 4) {
+                                        Text("See All").font(.subheadline).fontWeight(.bold)
+                                        Image(systemName: "chevron.right").font(.caption).fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.cyan)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .cornerRadius(8)
+                                }
+                                
                                 Picker("Watched Filter", selection: $watchedMediaType) {
                                     Text("All").tag("all")
                                     Text("Movies").tag("movie")
                                     Text("TV Shows").tag("tv")
                                 }
                                 .pickerStyle(SegmentedPickerStyle())
-                                .frame(width: 210)
+                                .frame(width: 180)
                             }
                             .padding(.horizontal)
                             
@@ -250,13 +300,25 @@ public struct ExploreView: View {
                                     .font(.title2).fontWeight(.black)
                                 Spacer()
                                 
+                                Button(action: { selectedSectionForDetail = "Trakt Most Played" }) {
+                                    HStack(spacing: 4) {
+                                        Text("See All").font(.subheadline).fontWeight(.bold)
+                                        Image(systemName: "chevron.right").font(.caption).fontWeight(.bold)
+                                    }
+                                    .foregroundColor(.cyan)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .cornerRadius(8)
+                                }
+                                
                                 Picker("Played Filter", selection: $playedMediaType) {
                                     Text("All").tag("all")
                                     Text("Movies").tag("movie")
                                     Text("TV Shows").tag("tv")
                                 }
                                 .pickerStyle(SegmentedPickerStyle())
-                                .frame(width: 210)
+                                .frame(width: 180)
                             }
                             .padding(.horizontal)
                             
@@ -275,6 +337,12 @@ public struct ExploreView: View {
                 minRating: $minRating,
                 mediaType: $filterMediaType
             )
+        }
+        .sheet(item: Binding(
+            get: { selectedSectionForDetail.map { SectionIdentifiable(title: $0) } },
+            set: { selectedSectionForDetail = $0?.title }
+        )) { section in
+            ExploreSectionDetailView(sectionTitle: section.title)
         }
         .task {
             loadExploreData()
@@ -471,4 +539,9 @@ public struct MediaCarouselHorizontal: View {
             .padding(.horizontal)
         }
     }
+}
+
+struct SectionIdentifiable: Identifiable {
+    var id: String { title }
+    let title: String
 }
