@@ -37,14 +37,34 @@ public class LibtorrentStreamEngine: ObservableObject {
         
         do {
             // Create session
+            let savePath = getTorrentSavePath()
             let newSession = Session(settings: SessionSettings())
             self.session = newSession
             
             onStatus("Starting DHT peer discovery...")
             try await newSession.startDHT()
             
-            onStatus("Parsing magnet link...")
-            let params = try AddTorrentParams.fromMagnet(magnetURL, savePath: getTorrentSavePath())
+            // Extract infoHash from magnet link
+            let infoHash = extractInfoHash(from: magnetURL)
+            
+            // Strategy: Try to fetch .torrent file from cache (instant metadata)
+            // This avoids the slow peer-based metadata resolution
+            var params: AddTorrentParams
+            
+            if let hash = infoHash {
+                onStatus("Fetching torrent metadata from cache...")
+                if let torrentData = await fetchTorrentFromCache(infoHash: hash) {
+                    onStatus("✅ Metadata cached! Parsing torrent file...")
+                    let torrentInfo = try TorrentInfo.parse(from: torrentData)
+                    params = AddTorrentParams(torrentInfo: torrentInfo, savePath: savePath)
+                } else {
+                    onStatus("Cache miss. Parsing magnet link...")
+                    params = try AddTorrentParams.fromMagnet(magnetURL, savePath: savePath)
+                }
+            } else {
+                onStatus("Parsing magnet link...")
+                params = try AddTorrentParams.fromMagnet(magnetURL, savePath: savePath)
+            }
             
             onStatus("Adding torrent to swarm...")
             let handle = try await newSession.addTorrent(params)
@@ -55,9 +75,43 @@ public class LibtorrentStreamEngine: ObservableObject {
                 self.statusText = "Connecting to peers..."
             }
             
-            // Wait for metadata (file list) to be resolved from peers
-            onStatus("Resolving torrent metadata from peers...")
-            let resolvedInfo = try await handle.waitForMetadata(timeout: 120)
+            // Get torrent info — either already available (from .torrent file) or wait for metadata
+            let resolvedInfo: TorrentInfo
+            if let files = await handle.getFiles(), !files.isEmpty {
+                // Metadata already available (from cached .torrent file)
+                onStatus("Metadata ready! Finding video file...")
+                // Reconstruct TorrentInfo from the handle's status
+                let status = await handle.status()
+                // Use getFiles() result directly
+                guard let videoFile = findLargestVideoFileFromEntries(files) else {
+                    onStatus("❌ No video file found in torrent")
+                    return nil
+                }
+                
+                let sizeStr = ByteCountFormatter.string(fromByteCount: videoFile.length, countStyle: .file)
+                onStatus("Found video: \(videoFile.path) (\(sizeStr))")
+                
+                // Start the local HTTP server
+                let server = TorrentHTTPServer(port: serverPort, savePath: savePath, videoFile: videoFile)
+                try server.start()
+                self.httpServer = server
+                
+                // Start monitoring download progress
+                startProgressMonitor(handle: handle, onStatus: onStatus)
+                
+                // Wait for buffer
+                onStatus("Buffering initial data for smooth playback...")
+                try await waitForBuffer(handle: handle, threshold: 0.03, onStatus: onStatus)
+                
+                let streamURL = "http://127.0.0.1:\(serverPort)/stream.mp4"
+                onStatus("✅ Stream ready! Playing via native AVPlayer.")
+                return streamURL
+                
+            } else {
+                // Need to wait for metadata from peers (magnet link path)
+                onStatus("Resolving torrent metadata from peers (this may take a moment)...")
+                resolvedInfo = try await handle.waitForMetadata(timeout: 60)
+            }
             
             // Find the largest video file
             guard let videoFile = findLargestVideoFile(info: resolvedInfo) else {
@@ -69,16 +123,16 @@ public class LibtorrentStreamEngine: ObservableObject {
             onStatus("Found video: \(videoFile.path) (\(sizeStr))")
             
             // Start the local HTTP server to serve downloaded pieces
-            let server = TorrentHTTPServer(port: serverPort, savePath: getTorrentSavePath(), videoFile: videoFile)
+            let server = TorrentHTTPServer(port: serverPort, savePath: savePath, videoFile: videoFile)
             try server.start()
             self.httpServer = server
             
             // Start monitoring download progress
             startProgressMonitor(handle: handle, onStatus: onStatus)
             
-            // Wait until enough data is buffered (first 5% or 10MB)
+            // Wait until enough data is buffered
             onStatus("Buffering initial data for smooth playback...")
-            try await waitForBuffer(handle: handle, threshold: 0.05, onStatus: onStatus)
+            try await waitForBuffer(handle: handle, threshold: 0.03, onStatus: onStatus)
             
             let streamURL = "http://127.0.0.1:\(serverPort)/stream.mp4"
             onStatus("✅ Stream ready! Playing via native AVPlayer.")
@@ -180,6 +234,67 @@ public class LibtorrentStreamEngine: ObservableObject {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
             }
         }
+    }
+    
+    // MARK: - Torrent Cache Fetch (Skip Metadata Resolution)
+    
+    /// Extract 40-char hex info hash from magnet URI
+    private func extractInfoHash(from magnetURL: String) -> String? {
+        // Match btih: followed by 40 hex chars
+        if let range = magnetURL.range(of: "btih:([a-fA-F0-9]{40})", options: .regularExpression) {
+            let match = magnetURL[range]
+            return String(match.dropFirst(5)).lowercased() // drop "btih:"
+        }
+        return nil
+    }
+    
+    /// Fetch .torrent file from public torrent cache services.
+    /// This provides instant metadata without needing peer-based metadata exchange.
+    private func fetchTorrentFromCache(infoHash: String) async -> Data? {
+        let cacheURLs = [
+            "https://itorrents.org/torrent/\(infoHash.uppercased()).torrent",
+            "https://btcache.me/torrent/\(infoHash.uppercased())",
+            "https://torrage.info/torrent/\(infoHash.uppercased()).torrent"
+        ]
+        
+        for urlString in cacheURLs {
+            guard let url = URL(string: urlString) else { continue }
+            
+            do {
+                var request = URLRequest(url: url, timeoutInterval: 8)
+                request.setValue("Mozilla/5.0", forHTTPHeaderField: "User-Agent")
+                
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                if let httpResponse = response as? HTTPURLResponse,
+                   httpResponse.statusCode == 200,
+                   data.count > 50 { // Valid .torrent files are > 50 bytes
+                    return data
+                }
+            } catch {
+                continue // Try next cache
+            }
+        }
+        
+        return nil
+    }
+    
+    /// Find largest video file from a [TorrentInfo.FileEntry] array
+    private func findLargestVideoFileFromEntries(_ files: [TorrentInfo.FileEntry]) -> TorrentInfo.FileEntry? {
+        let videoExtensions = ["mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "ts"]
+        
+        var largestFile: TorrentInfo.FileEntry? = nil
+        
+        for file in files {
+            let ext = (file.path as NSString).pathExtension.lowercased()
+            if videoExtensions.contains(ext) {
+                if largestFile == nil || file.length > (largestFile?.length ?? 0) {
+                    largestFile = file
+                }
+            }
+        }
+        
+        return largestFile
     }
 }
 
