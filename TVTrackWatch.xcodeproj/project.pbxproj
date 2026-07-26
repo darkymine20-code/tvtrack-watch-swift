@@ -37,6 +37,7 @@
 		100000012A1B2C3D0000001C /* UpcomingCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000001C /* UpcomingCalendarView.swift */; };
 		100000012A1B2C3D0000001E /* PersonDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000001E /* PersonDetailView.swift */; };
 		100000012A1B2C3D0000001F /* CollapsibleCommentTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D0000001F /* CollapsibleCommentTextView.swift */; };
+		100000012A1B2C3D00000020 /* FlussonicResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000020 /* FlussonicResolver.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -71,6 +72,7 @@
 		100000002A1B2C3D0000001C /* UpcomingCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/TVShows/UpcomingCalendarView.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D0000001E /* PersonDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Details/PersonDetailView.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D0000001F /* CollapsibleCommentTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/CollapsibleCommentTextView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000020 /* FlussonicResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/FlussonicResolver.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D0000001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -126,6 +128,7 @@
 				100000002A1B2C3D0000001C /* UpcomingCalendarView.swift */,
 				100000002A1B2C3D0000001E /* PersonDetailView.swift */,
 				100000002A1B2C3D0000001F /* CollapsibleCommentTextView.swift */,
+				100000002A1B2C3D00000020 /* FlussonicResolver.swift */,
 				100000002A1B2C3D0000001D /* Info.plist */,
 			);
 			path = TVTrackWatch;
@@ -218,6 +221,7 @@
 				100000012A1B2C3D0000001C /* UpcomingCalendarView.swift in Sources */,
 				100000012A1B2C3D0000001E /* PersonDetailView.swift in Sources */,
 				100000012A1B2C3D0000001F /* CollapsibleCommentTextView.swift in Sources */,
+				100000012A1B2C3D00000020 /* FlussonicResolver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
