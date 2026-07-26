@@ -388,6 +388,22 @@ public final class IMDbCSVImporter {
                         releaseDate: item.releaseDate ?? item.firstAirDate
                     )
                     
+                    if local.title == "Movie" || local.title == "TV Show" || local.title == "Title" || local.title.isEmpty {
+                        local.title = item.displayTitle
+                    }
+                    if local.posterPath == nil {
+                        local.posterPath = item.posterPath
+                    }
+                    if local.backdropPath == nil {
+                        local.backdropPath = item.backdropPath
+                    }
+                    if local.voteAverage == nil {
+                        local.voteAverage = item.voteAverage
+                    }
+                    if local.releaseDate == nil {
+                        local.releaseDate = item.releaseDate ?? item.firstAirDate
+                    }
+                    
                     local.isWatched = true
                     if rating > 0 {
                         local.userRating = rating

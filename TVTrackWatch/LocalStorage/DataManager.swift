@@ -149,34 +149,87 @@ public final class DataManager: ObservableObject {
     }
     
     public func updateCreditsInfo(tmdbId: Int, mediaType: String, castNames: [String], directorNames: [String] = []) {
+        updateMediaMetadata(
+            tmdbId: tmdbId,
+            mediaType: mediaType,
+            castNames: castNames,
+            directorNames: directorNames
+        )
+    }
+    
+    public func updateMediaMetadata(
+        tmdbId: Int,
+        mediaType: String,
+        title: String? = nil,
+        posterPath: String? = nil,
+        backdropPath: String? = nil,
+        voteAverage: Double? = nil,
+        releaseDate: String? = nil,
+        castNames: [String]? = nil,
+        directorNames: [String]? = nil
+    ) {
         let key = "\(mediaType)_\(tmdbId)"
         var current = items[key] ?? LocalMediaItem(
             tmdbId: tmdbId,
             mediaType: mediaType,
-            title: mediaType == "movie" ? "Movie" : "TV Show",
-            castNames: castNames,
-            directorNames: directorNames
+            title: title ?? (mediaType == "movie" ? "Movie" : "TV Show"),
+            posterPath: posterPath,
+            backdropPath: backdropPath,
+            voteAverage: voteAverage,
+            releaseDate: releaseDate,
+            castNames: castNames ?? [],
+            directorNames: directorNames ?? []
         )
-        current.castNames = castNames
-        if !directorNames.isEmpty {
+        
+        if let title = title, !title.isEmpty, title != "Movie" && title != "TV Show" && title != "Title" {
+            current.title = title
+        }
+        if let posterPath = posterPath, !posterPath.isEmpty {
+            current.posterPath = posterPath
+        }
+        if let backdropPath = backdropPath, !backdropPath.isEmpty {
+            current.backdropPath = backdropPath
+        }
+        if let voteAverage = voteAverage, voteAverage > 0 {
+            current.voteAverage = voteAverage
+        }
+        if let releaseDate = releaseDate, !releaseDate.isEmpty {
+            current.releaseDate = releaseDate
+        }
+        if let castNames = castNames, !castNames.isEmpty {
+            current.castNames = castNames
+        }
+        if let directorNames = directorNames, !directorNames.isEmpty {
             current.directorNames = directorNames
         }
+        
         items[key] = current
         saveToDisk()
     }
     
     public func fetchMissingCreditsForWatchedItems() {
         Task {
-            let targets = items.values.filter { $0.isWatched || !$0.watchedEpisodes.isEmpty || $0.isWatchlist }
+            let targets = items.values.filter {
+                $0.isWatched || !$0.watchedEpisodes.isEmpty || $0.isWatchlist || $0.title == "Movie" || $0.title == "TV Show" || $0.title == "Title" || $0.posterPath == nil
+            }
             for item in targets {
                 do {
                     if item.mediaType == "tv" {
                         let det = try await TMDbService.shared.fetchTVDetails(id: item.tmdbId)
-                        if item.castNames.isEmpty {
-                            let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
-                            let directors = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
-                            updateCreditsInfo(tmdbId: item.tmdbId, mediaType: "tv", castNames: Array(cast), directorNames: Array(directors))
-                        }
+                        let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
+                        let directors = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
+                        
+                        updateMediaMetadata(
+                            tmdbId: item.tmdbId,
+                            mediaType: "tv",
+                            title: det.name,
+                            posterPath: det.posterPath,
+                            backdropPath: det.backdropPath,
+                            voteAverage: det.voteAverage,
+                            releaseDate: det.firstAirDate,
+                            castNames: Array(cast),
+                            directorNames: Array(directors)
+                        )
                         
                         // Calculate released episodes
                         var releasedCount = 0
@@ -203,11 +256,22 @@ public final class DataManager: ObservableObject {
                             releasedCount = total
                         }
                         updateEpisodeCounts(tmdbId: item.tmdbId, totalEpisodes: det.numberOfEpisodes, releasedEpisodes: releasedCount)
-                    } else if item.castNames.isEmpty {
+                    } else {
                         let det = try await TMDbService.shared.fetchMovieDetails(id: item.tmdbId)
                         let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
                         let directors = det.credits?.crew.filter { $0.job == "Director" }.map { $0.name } ?? []
-                        updateCreditsInfo(tmdbId: item.tmdbId, mediaType: "movie", castNames: Array(cast), directorNames: Array(directors))
+                        
+                        updateMediaMetadata(
+                            tmdbId: item.tmdbId,
+                            mediaType: "movie",
+                            title: det.title,
+                            posterPath: det.posterPath,
+                            backdropPath: det.backdropPath,
+                            voteAverage: det.voteAverage,
+                            releaseDate: det.releaseDate,
+                            castNames: Array(cast),
+                            directorNames: Array(directors)
+                        )
                     }
                 } catch {
                     print("Failed pre-fetching details for \(item.title): \(error)")
