@@ -414,12 +414,45 @@ public final class IMDbCSVImporter {
                         local.lastWatchedDate = Date()
                     }
                     
-                    DataManager.shared.items[key] = local
-                    
                     if isTV {
                         importedTVShows += 1
+                        if let det = try? await TMDbService.shared.fetchTVDetails(id: item.id) {
+                            local.totalEpisodes = det.numberOfEpisodes
+                            local.status = det.status
+                            
+                            let epDateStr = dateFormatter.string(from: local.lastWatchedDate ?? Date())
+                            var releasedCount = 0
+                            if let seasons = det.seasons {
+                                for season in seasons where season.seasonNumber > 0 {
+                                    let epCount = season.episodeCount ?? 0
+                                    releasedCount += epCount
+                                    if epCount > 0 {
+                                        for ep in 1...epCount {
+                                            local.watchedEpisodes["\(season.seasonNumber)_\(ep)"] = epDateStr
+                                        }
+                                    }
+                                }
+                            }
+                            if releasedCount == 0, let total = det.numberOfEpisodes, total > 0 {
+                                releasedCount = total
+                                for ep in 1...total {
+                                    local.watchedEpisodes["1_\(ep)"] = epDateStr
+                                }
+                            }
+                            local.releasedEpisodes = releasedCount
+                        }
                     } else {
                         importedMovies += 1
+                    }
+                    
+                    DataManager.shared.items[key] = local
+                    if isTV {
+                        DataManager.shared.updateEpisodeCounts(
+                            tmdbId: item.id,
+                            totalEpisodes: local.totalEpisodes,
+                            releasedEpisodes: local.releasedEpisodes,
+                            status: local.status
+                        )
                     }
                 } else {
                     failedCount += 1
