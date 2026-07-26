@@ -23,6 +23,11 @@ public struct AppConfig {
             tvURLTemplate: "torrentio_seedr"
         ),
         StreamingServer(
+            name: "Direct P2P Torrent Engine",
+            movieURLTemplate: "direct_p2p_torrent",
+            tvURLTemplate: "direct_p2p_torrent"
+        ),
+        StreamingServer(
             name: "Vidking Primary",
             movieURLTemplate: "https://www.vidking.net/embed/movie/{tmdb_id}",
             tvURLTemplate: "https://www.vidking.net/embed/tv/{tmdb_id}/{season_number}/{episode_number}"

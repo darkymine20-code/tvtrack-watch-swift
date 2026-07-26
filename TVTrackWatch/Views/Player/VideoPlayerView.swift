@@ -99,7 +99,9 @@ public struct VideoPlayerView: View {
     @State private var directVideoURL: URL? = nil
     @State private var isResolvingFlussonic = false
     @State private var isResolvingSeedr = false
+    @State private var isResolvingP2P = false
     @State private var seedrStatusMessage = ""
+    @State private var p2pStatusMessage = ""
     @State private var showTorrentSelectionSheet = false
     @State private var avPlayer: AVPlayer? = nil
     
@@ -134,6 +136,10 @@ public struct VideoPlayerView: View {
     
     public var isTorrentioSeedrSelected: Bool {
         streamingEngine.selectedServer.name.contains("Seedr") || streamingEngine.selectedServer.movieURLTemplate == "torrentio_seedr"
+    }
+    
+    public var isDirectP2PTorrentSelected: Bool {
+        streamingEngine.selectedServer.name.contains("P2P") || streamingEngine.selectedServer.movieURLTemplate == "direct_p2p_torrent"
     }
     
     public var currentStreamURL: URL? {
@@ -248,6 +254,8 @@ public struct VideoPlayerView: View {
                                 resolveFlussonicURL()
                             } else if server.name.contains("Seedr") || server.movieURLTemplate == "torrentio_seedr" {
                                 resolveSeedrTorrentURL()
+                            } else if server.name.contains("P2P") || server.movieURLTemplate == "direct_p2p_torrent" {
+                                resolveP2PTorrentURL()
                             } else {
                                 removeTimeObserver()
                                 saveCurrentProgress()
@@ -364,6 +372,43 @@ public struct VideoPlayerView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
                     }
+                } else if isDirectP2PTorrentSelected {
+                    if isResolvingP2P {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .green))
+                                .scaleEffect(1.4)
+                            Text("Direct P2P Torrent Engine (No Seedr)")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text(p2pStatusMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.green)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 32)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black)
+                    } else if let player = avPlayer {
+                        renderPlayerContainer(player: player)
+                    } else if let directURL = directVideoURL {
+                        WebViewWrapper(url: directURL)
+                            .ignoresSafeArea()
+                    } else {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 44))
+                                .foregroundColor(.green)
+                            Text("Direct P2P Torrent Stream Failed.")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text(p2pStatusMessage.isEmpty ? "Could not connect to P2P torrent peers." : p2pStatusMessage)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black)
+                    }
                 } else if let url = currentStreamURL {
                     WebViewWrapper(url: url)
                         .ignoresSafeArea()
@@ -390,7 +435,11 @@ public struct VideoPlayerView: View {
                 seasonNumber: seasonNumber,
                 episodeNumber: episodeNumber
             ) { candidate in
-                processSelectedTorrentCandidate(candidate: candidate)
+                if isDirectP2PTorrentSelected {
+                    processSelectedP2PCandidate(candidate: candidate)
+                } else {
+                    processSelectedTorrentCandidate(candidate: candidate)
+                }
             }
         }
     }
@@ -533,6 +582,59 @@ public struct VideoPlayerView: View {
             // Open user torrent selection sheet
             await MainActor.run {
                 self.showTorrentSelectionSheet = true
+            }
+        }
+    }
+    
+    private func resolveP2PTorrentURL() {
+        isResolvingP2P = true
+        p2pStatusMessage = "Opening P2P torrent stream selector..."
+        removeTimeObserver()
+        avPlayer?.pause()
+        avPlayer = nil
+        
+        showTorrentSelectionSheet = true
+    }
+    
+    private func processSelectedP2PCandidate(candidate: TorrentioStreamCandidate) {
+        isResolvingP2P = true
+        p2pStatusMessage = "Connecting to P2P Swarm..."
+        removeTimeObserver()
+        avPlayer?.pause()
+        avPlayer = nil
+        
+        let cleanTitle: String
+        if isTV {
+            if let index = title.range(of: " S")?.lowerBound {
+                cleanTitle = String(title[..<index])
+            } else {
+                cleanTitle = title
+            }
+        } else {
+            cleanTitle = title
+        }
+        
+        let year = releaseYear ?? Calendar.current.component(.year, from: Date())
+        
+        Task {
+            if let streamURL = await LocalTorrentStreamer.shared.streamTorrentDirectly(
+                magnetURL: candidate.magnetURL,
+                title: cleanTitle,
+                onProgress: { status in
+                    DispatchQueue.main.async {
+                        self.p2pStatusMessage = status
+                    }
+                }
+            ) {
+                await MainActor.run {
+                    self.startPlayingDirectURL(targetURL: streamURL, cleanTitle: cleanTitle, year: year)
+                    self.isResolvingP2P = false
+                }
+            } else {
+                await MainActor.run {
+                    self.p2pStatusMessage = "Failed to stream P2P torrent directly."
+                    self.isResolvingP2P = false
+                }
             }
         }
     }
