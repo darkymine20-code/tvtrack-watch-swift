@@ -20,6 +20,7 @@ public struct ProfileView: View {
         case watchedTV = "Watched TV Shows"
         case favoriteMovies = "Favorite Movies"
         case favoriteTV = "Favorite TV Shows"
+        case topCast = "Top Cast & Directors"
         case stoppedWatching = "Stopped Watching Archive"
         
         public var id: String { rawValue }
@@ -29,6 +30,7 @@ public struct ProfileView: View {
             case .watchedTV: return "tv.fill"
             case .favoriteMovies: return "heart.fill"
             case .favoriteTV: return "star.fill"
+            case .topCast: return "person.3.fill"
             case .stoppedWatching: return "archivebox.fill"
             }
         }
@@ -38,6 +40,7 @@ public struct ProfileView: View {
             case .watchedTV: return .green
             case .favoriteMovies: return .red
             case .favoriteTV: return .pink
+            case .topCast: return .purple
             case .stoppedWatching: return .orange
             }
         }
@@ -70,12 +73,17 @@ public struct ProfileView: View {
         allItems.filter { $0.isStoppedWatching }
     }
     
+    private var topCastCount: Int {
+        stats.topActors.filter { $0.count >= 4 }.count + stats.topDirectors.filter { $0.count >= 4 }.count
+    }
+    
     private var currentFilteredItems: [LocalMediaItem] {
         switch selectedFilter {
         case .watchedMovies: return watchedMovies
         case .watchedTV: return watchedTV
         case .favoriteMovies: return favoriteMovies
         case .favoriteTV: return favoriteTV
+        case .topCast: return []
         case .stoppedWatching: return stoppedWatchingArchive
         }
     }
@@ -88,14 +96,14 @@ public struct ProfileView: View {
     private func detailsView(for item: LocalMediaItem) -> some View {
         if item.mediaType == "tv" {
             TVShowDetailsView(show: TMDbMediaItem(
-                id: item.tmdbId, title: nil, name: item.title, overview: nil,
+                id: item.tmdbId, title: nil, name: item.title, overview: "",
                 posterPath: item.posterPath, backdropPath: item.backdropPath,
-                voteAverage: item.voteAverage, voteCount: nil, releaseDate: nil,
-                firstAirDate: item.releaseDate, mediaType: "tv", genreIds: nil
+                voteAverage: item.voteAverage, voteCount: nil, releaseDate: item.releaseDate,
+                firstAirDate: nil, mediaType: "tv", genreIds: nil
             ))
         } else {
             MovieDetailsView(movie: TMDbMediaItem(
-                id: item.tmdbId, title: item.title, name: nil, overview: nil,
+                id: item.tmdbId, title: item.title, name: nil, overview: "",
                 posterPath: item.posterPath, backdropPath: item.backdropPath,
                 voteAverage: item.voteAverage, voteCount: nil, releaseDate: item.releaseDate,
                 firstAirDate: nil, mediaType: "movie", genreIds: nil
@@ -153,7 +161,7 @@ public struct ProfileView: View {
                 .padding(.horizontal)
                 
                 // Dashboard Counters Grid (Clickable Category Filters)
-                HStack(spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
                     CounterCardView(filter: .watchedMovies, count: watchedMovies.count, isSelected: selectedFilter == .watchedMovies) {
                         selectedFilter = .watchedMovies
                     }
@@ -166,40 +174,42 @@ public struct ProfileView: View {
                     CounterCardView(filter: .favoriteTV, count: favoriteTV.count, isSelected: selectedFilter == .favoriteTV) {
                         selectedFilter = .favoriteTV
                     }
+                    CounterCardView(filter: .topCast, count: topCastCount, isSelected: selectedFilter == .topCast) {
+                        selectedFilter = .topCast
+                    }
                     CounterCardView(filter: .stoppedWatching, count: stoppedWatchingArchive.count, isSelected: selectedFilter == .stoppedWatching) {
                         selectedFilter = .stoppedWatching
                     }
                 }
                 .padding(.horizontal)
-                
-                // Cast & Director Stats
-                TopStatsView(topActors: stats.topActors, topDirectors: stats.topDirectors)
-                
-                // Active Selected Category Collection Grid
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Image(systemName: selectedFilter.icon)
-                            .foregroundColor(selectedFilter.color)
-                            .font(.title2)
-                        Text("\(selectedFilter.rawValue) (\(currentFilteredItems.count))")
-                            .font(.title2).fontWeight(.black)
-                        Spacer()
-                    }
-                    .padding(.horizontal)
-                    
-                    if currentFilteredItems.isEmpty {
-                        GlassCardView {
-                            VStack(spacing: 8) {
-                                Image(systemName: "tray")
-                                    .font(.largeTitle).foregroundColor(.gray)
-                                Text("No items in \(selectedFilter.rawValue).")
-                                    .font(.headline).foregroundColor(.gray)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
+                // Active Selected Category View
+                if selectedFilter == .topCast {
+                    TopStatsView(topActors: stats.topActors, topDirectors: stats.topDirectors)
+                } else {
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Image(systemName: selectedFilter.icon)
+                                .foregroundColor(selectedFilter.color)
+                                .font(.title2)
+                            Text("\(selectedFilter.rawValue) (\(currentFilteredItems.count))")
+                                .font(.title2).fontWeight(.black)
+                            Spacer()
                         }
                         .padding(.horizontal)
-                    } else {
+                        
+                        if currentFilteredItems.isEmpty {
+                            GlassCardView {
+                                VStack(spacing: 8) {
+                                    Image(systemName: "tray")
+                                        .font(.largeTitle).foregroundColor(.gray)
+                                    Text("No items in \(selectedFilter.rawValue).")
+                                        .font(.headline).foregroundColor(.gray)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                            }
+                            .padding(.horizontal)
+                        } else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 20)], spacing: 20) {
                             ForEach(currentFilteredItems) { item in
                                 NavigationLink(destination: detailsView(for: item)) {
