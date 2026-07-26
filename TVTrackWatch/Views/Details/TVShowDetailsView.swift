@@ -17,6 +17,7 @@ public struct TVShowDetailsView: View {
     @State private var visibleIMDbCount = 5
     @State private var visibleTraktCount = 5
     @State private var selectedSeason = 1
+    @State private var visibleEpisodeCount = 10
     @State private var seasonDetails: TMDbSeasonDetails?
     @State private var isPlayerPresented = false
     @State private var activeEpisode: (season: Int, episode: Int)?
@@ -342,8 +343,9 @@ public struct TVShowDetailsView: View {
                     
                     // Original EpisodeCardView List
                     if let episodes = seasonDetails?.episodes {
+                        let visibleEpisodes = Array(episodes.prefix(visibleEpisodeCount))
                         VStack(spacing: 12) {
-                            ForEach(episodes) { ep in
+                            ForEach(visibleEpisodes) { ep in
                                 let epKey = "\(selectedSeason)_\(ep.episodeNumber)"
                                 let isEpWatched = localItem?.watchedEpisodes[epKey] != nil
                                 
@@ -367,6 +369,31 @@ public struct TVShowDetailsView: View {
                                         isPlayerPresented = true
                                     }
                                 )
+                            }
+                            
+                            if visibleEpisodeCount < episodes.count {
+                                Button(action: {
+                                    withAnimation {
+                                        visibleEpisodeCount += 10
+                                    }
+                                }) {
+                                    HStack(spacing: 8) {
+                                        Text("Show More Episodes (\(episodes.count - visibleEpisodeCount) remaining)")
+                                        Image(systemName: "chevron.down")
+                                    }
+                                    .font(.subheadline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.green)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color.green.opacity(0.15))
+                                    .cornerRadius(10)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                    )
+                                }
+                                .padding(.top, 4)
                             }
                         }
                         .padding(.horizontal)
@@ -685,6 +712,7 @@ public struct TVShowDetailsView: View {
     }
     
     private func loadSeasonEpisodes(seasonNumber: Int) {
+        visibleEpisodeCount = 10
         Task {
             do {
                 let sDetails = try await tmdbService.fetchSeasonDetails(tvId: show.id, seasonNumber: seasonNumber)
