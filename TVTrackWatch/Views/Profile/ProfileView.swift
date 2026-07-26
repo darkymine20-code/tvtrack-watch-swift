@@ -264,7 +264,6 @@ public struct ProfileView: View {
             }
             .padding(.vertical)
         }
-        }
         .fileImporter(
             isPresented: $isCSVImporterPresented,
             allowedContentTypes: [.item, .content, .data, .plainText, .commaSeparatedText],
