@@ -5,11 +5,11 @@ public struct LocalMediaItem: Codable, Identifiable, Hashable {
     public var id: String { "\(mediaType)_\(tmdbId)" }
     public let tmdbId: Int
     public let mediaType: String // "movie" or "tv"
-    public let title: String
-    public let posterPath: String?
-    public let backdropPath: String?
-    public let voteAverage: Double?
-    public let releaseDate: String?
+    public var title: String
+    public var posterPath: String?
+    public var backdropPath: String?
+    public var voteAverage: Double?
+    public var releaseDate: String?
     
     // User State Flags
     public var isWatchlist: Bool
