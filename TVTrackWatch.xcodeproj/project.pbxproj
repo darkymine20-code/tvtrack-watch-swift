@@ -41,6 +41,7 @@
 		100000012A1B2C3D00000021 /* FlussonicSubtitleResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000021 /* FlussonicSubtitleResolver.swift */; };
 		100000012A1B2C3D00000022 /* SeedrTorrentResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000022 /* SeedrTorrentResolver.swift */; };
 		100000012A1B2C3D00000023 /* TorrentSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000023 /* TorrentSelectionSheet.swift */; };
+		100000012A1B2C3D00000024 /* OpenSubtitlesResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000024 /* OpenSubtitlesResolver.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -79,6 +80,7 @@
 		100000002A1B2C3D00000021 /* FlussonicSubtitleResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/FlussonicSubtitleResolver.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D00000022 /* SeedrTorrentResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/SeedrTorrentResolver.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D00000023 /* TorrentSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Player/TorrentSelectionSheet.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000024 /* OpenSubtitlesResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/OpenSubtitlesResolver.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D0000001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -138,6 +140,7 @@
 				100000002A1B2C3D00000021 /* FlussonicSubtitleResolver.swift */,
 				100000002A1B2C3D00000022 /* SeedrTorrentResolver.swift */,
 				100000002A1B2C3D00000023 /* TorrentSelectionSheet.swift */,
+				100000002A1B2C3D00000024 /* OpenSubtitlesResolver.swift */,
 				100000002A1B2C3D0000001D /* Info.plist */,
 			);
 			path = TVTrackWatch;
@@ -234,6 +237,7 @@
 				100000012A1B2C3D00000021 /* FlussonicSubtitleResolver.swift in Sources */,
 				100000012A1B2C3D00000022 /* SeedrTorrentResolver.swift in Sources */,
 				100000012A1B2C3D00000023 /* TorrentSelectionSheet.swift in Sources */,
+				100000012A1B2C3D00000024 /* OpenSubtitlesResolver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

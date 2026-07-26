@@ -107,6 +107,9 @@ public struct VideoPlayerView: View {
     @State private var englishSubtitleURL: URL? = nil
     @State private var kurdishSubtitleCues: [SubtitleCue] = []
     @State private var englishSubtitleCues: [SubtitleCue] = []
+    @State private var openSubtitlesList: [OpenSubItem] = []
+    @State private var selectedOpenSubItem: OpenSubItem? = nil
+    @State private var openSubtitlesCues: [String: [SubtitleCue]] = [:]
     @State private var selectedSubtitleLanguage: String = "Off"
     @State private var activeSubtitleText: String = ""
     @State private var timeObserverToken: Any? = nil
@@ -162,6 +165,7 @@ public struct VideoPlayerView: View {
                 Menu {
                     Button(action: {
                         selectedSubtitleLanguage = "Off"
+                        selectedOpenSubItem = nil
                         activeSubtitleText = ""
                     }) {
                         HStack {
@@ -172,30 +176,51 @@ public struct VideoPlayerView: View {
                         }
                     }
                     
-                    Button(action: {
-                        selectedSubtitleLanguage = "Kurdish (Ku)"
-                    }) {
-                        HStack {
-                            Text("Kurdish (Ku)")
+                    if kurdishSubtitleURL != nil || englishSubtitleURL != nil {
+                        Section(header: Text("Flussonic Direct")) {
                             if kurdishSubtitleURL != nil {
-                                Text("✓")
+                                Button(action: {
+                                    selectedSubtitleLanguage = "Kurdish (Flussonic)"
+                                    selectedOpenSubItem = nil
+                                }) {
+                                    HStack {
+                                        Text("Kurdish (Flussonic)")
+                                        if selectedSubtitleLanguage == "Kurdish (Flussonic)" {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                             }
-                            if selectedSubtitleLanguage == "Kurdish (Ku)" {
-                                Image(systemName: "checkmark")
+                            
+                            if englishSubtitleURL != nil {
+                                Button(action: {
+                                    selectedSubtitleLanguage = "English (Flussonic)"
+                                    selectedOpenSubItem = nil
+                                }) {
+                                    HStack {
+                                        Text("English (Flussonic)")
+                                        if selectedSubtitleLanguage == "English (Flussonic)" {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                     
-                    Button(action: {
-                        selectedSubtitleLanguage = "English (En)"
-                    }) {
-                        HStack {
-                            Text("English (En)")
-                            if englishSubtitleURL != nil {
-                                Text("✓")
-                            }
-                            if selectedSubtitleLanguage == "English (En)" {
-                                Image(systemName: "checkmark")
+                    if !openSubtitlesList.isEmpty {
+                        Section(header: Text("OpenSubtitles Cloud")) {
+                            ForEach(openSubtitlesList) { subItem in
+                                Button(action: {
+                                    selectOpenSubItem(subItem)
+                                }) {
+                                    HStack {
+                                        Text("\(subItem.language) (OpenSubtitles)")
+                                        if selectedOpenSubItem?.id == subItem.id {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -602,11 +627,12 @@ public struct VideoPlayerView: View {
         self.isResolvingFlussonic = false
         self.isResolvingSeedr = false
         
-        resolveFlussonicSubtitles(targetURL: targetURL, cleanTitle: cleanTitle, year: year)
+        resolveAllSubtitles(targetURL: targetURL, cleanTitle: cleanTitle, year: year)
     }
     
-    private func resolveFlussonicSubtitles(targetURL: URL?, cleanTitle: String, year: Int) {
+    private func resolveAllSubtitles(targetURL: URL?, cleanTitle: String, year: Int) {
         Task {
+            // 1. Fetch Flussonic Direct Subtitles
             let subResult = await FlussonicSubtitleResolver.shared.resolveSubtitles(
                 title: cleanTitle,
                 year: year,
@@ -626,7 +652,7 @@ public struct VideoPlayerView: View {
                 await MainActor.run {
                     self.kurdishSubtitleCues = parsed
                     if self.selectedSubtitleLanguage == "Off" && !parsed.isEmpty {
-                        self.selectedSubtitleLanguage = "Kurdish (Ku)"
+                        self.selectedSubtitleLanguage = "Kurdish (Flussonic)"
                     }
                 }
             }
@@ -636,9 +662,40 @@ public struct VideoPlayerView: View {
                 await MainActor.run {
                     self.englishSubtitleCues = parsed
                     if self.selectedSubtitleLanguage == "Off" && self.kurdishSubtitleCues.isEmpty && !parsed.isEmpty {
-                        self.selectedSubtitleLanguage = "English (En)"
+                        self.selectedSubtitleLanguage = "English (Flussonic)"
                     }
                 }
+            }
+            
+            // 2. Fetch OpenSubtitles Cloud Subtitles
+            var resolvedImdbId = await TMDbService.shared.fetchIMDbId(mediaType: isTV ? "tv" : "movie", id: tmdbId) ?? ""
+            if resolvedImdbId.isEmpty {
+                resolvedImdbId = "tt\(tmdbId)"
+            }
+            
+            let openSubs = await OpenSubtitlesResolver.shared.fetchSubtitles(
+                imdbId: resolvedImdbId,
+                isTV: isTV,
+                season: seasonNumber,
+                episode: episodeNumber
+            )
+            
+            await MainActor.run {
+                self.openSubtitlesList = openSubs
+            }
+        }
+    }
+    
+    private func selectOpenSubItem(_ item: OpenSubItem) {
+        selectedOpenSubItem = item
+        selectedSubtitleLanguage = "\(item.language) (OpenSubtitles)"
+        
+        if openSubtitlesCues[item.id] != nil { return }
+        
+        Task {
+            let parsed = await FlussonicSubtitleResolver.shared.fetchAndParseSubtitle(from: item.url)
+            await MainActor.run {
+                self.openSubtitlesCues[item.id] = parsed
             }
         }
     }
@@ -693,10 +750,12 @@ public struct VideoPlayerView: View {
         }
         
         let targetCues: [SubtitleCue]
-        if selectedSubtitleLanguage == "Kurdish (Ku)" {
+        if selectedSubtitleLanguage == "Kurdish (Flussonic)" || selectedSubtitleLanguage == "Kurdish (Ku)" {
             targetCues = kurdishSubtitleCues
-        } else if selectedSubtitleLanguage == "English (En)" {
+        } else if selectedSubtitleLanguage == "English (Flussonic)" || selectedSubtitleLanguage == "English (En)" {
             targetCues = englishSubtitleCues
+        } else if let openItem = selectedOpenSubItem {
+            targetCues = openSubtitlesCues[openItem.id] ?? []
         } else {
             targetCues = []
         }
