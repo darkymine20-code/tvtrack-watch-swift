@@ -192,6 +192,18 @@ public struct TVShowDetailsView: View {
                             .background(Color.white.opacity(0.1))
                             .cornerRadius(12)
                     }
+                    
+                    Button(action: { dataManager.toggleArchiveShow(item: show) }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: localItem?.isStoppedWatching == true ? "archivebox.fill" : "archivebox")
+                            Text(localItem?.isStoppedWatching == true ? "Archived" : "Archive")
+                        }
+                        .font(.headline)
+                        .padding(.horizontal, 14).padding(.vertical, 10)
+                        .background(localItem?.isStoppedWatching == true ? Color.orange : Color.white.opacity(0.1))
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                    }
                     Spacer()
                 }
                 .padding(.horizontal)

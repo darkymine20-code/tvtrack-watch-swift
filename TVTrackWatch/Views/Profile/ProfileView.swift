@@ -77,19 +77,19 @@ public struct ProfileView: View {
     }
     
     private var watchedMovies: [LocalMediaItem] {
-        allItems.filter { $0.mediaType == "movie" && $0.isWatched }
+        allItems.filter { $0.mediaType == "movie" && $0.isWatched && !$0.isStoppedWatching }
     }
     
     private var watchedTV: [LocalMediaItem] {
-        allItems.filter { $0.mediaType == "tv" && $0.isWatched }
+        allItems.filter { $0.mediaType == "tv" && $0.isWatched && !$0.isStoppedWatching }
     }
     
     private var favoriteMovies: [LocalMediaItem] {
-        allItems.filter { $0.mediaType == "movie" && $0.isFavorite }
+        allItems.filter { $0.mediaType == "movie" && $0.isFavorite && !$0.isStoppedWatching }
     }
     
     private var favoriteTV: [LocalMediaItem] {
-        allItems.filter { $0.mediaType == "tv" && $0.isFavorite }
+        allItems.filter { $0.mediaType == "tv" && $0.isFavorite && !$0.isStoppedWatching }
     }
     
     private var stoppedWatchingArchive: [LocalMediaItem] {

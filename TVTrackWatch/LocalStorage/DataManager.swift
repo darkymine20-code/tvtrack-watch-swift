@@ -48,8 +48,25 @@ public final class DataManager: ObservableObject {
         let key = "\(mediaType)_\(tmdbId)"
         guard var current = items[key] else { return }
         current.isStoppedWatching.toggle()
+        if current.isStoppedWatching {
+            current.isWatchlist = false
+            current.isWatched = false
+        }
         items[key] = current
         saveToDisk()
+    }
+    
+    public func toggleArchiveShow(item: TMDbMediaItem, castNames: [String] = [], directorNames: [String] = []) {
+        let key = "\(item.mediaType ?? "tv")_\(item.id)"
+        var current = items[key] ?? createLocalItem(from: item, castNames: castNames, directorNames: directorNames)
+        current.isStoppedWatching.toggle()
+        if current.isStoppedWatching {
+            current.isWatchlist = false
+            current.isWatched = false
+        }
+        items[key] = current
+        saveToDisk()
+        checkAndRepairMetadataIfNeeded(item: current)
     }
     
     public func setUserRating(tmdbId: Int, mediaType: String, rating: Double) {
