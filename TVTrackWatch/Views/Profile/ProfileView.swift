@@ -111,6 +111,89 @@ public struct ProfileView: View {
         }
     }
     
+    @ViewBuilder
+    private var activeFilterContentView: some View {
+        if selectedFilter == .topCast {
+            TopStatsView(topActors: stats.topActors, topDirectors: stats.topDirectors)
+        } else {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Image(systemName: selectedFilter.icon)
+                        .foregroundColor(selectedFilter.color)
+                        .font(.title2)
+                    Text("\(selectedFilter.rawValue) (\(currentFilteredItems.count))")
+                        .font(.title2).fontWeight(.black)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                
+                if currentFilteredItems.isEmpty {
+                    GlassCardView {
+                        VStack(spacing: 8) {
+                            Image(systemName: "tray")
+                                .font(.largeTitle).foregroundColor(.gray)
+                            Text("No items in \(selectedFilter.rawValue).")
+                                .font(.headline).foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                    }
+                    .padding(.horizontal)
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 20)], spacing: 20) {
+                        ForEach(currentFilteredItems) { item in
+                            NavigationLink(destination: detailsView(for: item)) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ZStack(alignment: .topTrailing) {
+                                        if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
+                                            AsyncImage(url: url) { img in
+                                                img.resizable().aspectRatio(contentMode: .fill)
+                                            } placeholder: {
+                                                Rectangle().fill(Color.gray.opacity(0.3))
+                                            }
+                                            .frame(height: 220)
+                                            .cornerRadius(12)
+                                            .clipped()
+                                        } else {
+                                            Rectangle()
+                                                .fill(Color.gray.opacity(0.3))
+                                                .frame(height: 220)
+                                                .cornerRadius(12)
+                                        }
+                                        
+                                        // User Rating Badge
+                                        if let rating = item.userRating, rating > 0 {
+                                            HStack(spacing: 2) {
+                                                Image(systemName: "star.fill")
+                                                    .font(.system(size: 10))
+                                                    .foregroundColor(.yellow)
+                                                Text(String(format: "%.0f", rating))
+                                                    .font(.caption2)
+                                                    .fontWeight(.black)
+                                                    .foregroundColor(.white)
+                                            }
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(Color.black.opacity(0.85))
+                                            .cornerRadius(6)
+                                            .padding(6)
+                                        }
+                                    }
+                                    
+                                    Text(item.title)
+                                        .font(.caption).fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+    
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -182,85 +265,9 @@ public struct ProfileView: View {
                     }
                 }
                 .padding(.horizontal)
+                
                 // Active Selected Category View
-                if selectedFilter == .topCast {
-                    TopStatsView(topActors: stats.topActors, topDirectors: stats.topDirectors)
-                } else {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            Image(systemName: selectedFilter.icon)
-                                .foregroundColor(selectedFilter.color)
-                                .font(.title2)
-                            Text("\(selectedFilter.rawValue) (\(currentFilteredItems.count))")
-                                .font(.title2).fontWeight(.black)
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        
-                        if currentFilteredItems.isEmpty {
-                            GlassCardView {
-                                VStack(spacing: 8) {
-                                    Image(systemName: "tray")
-                                        .font(.largeTitle).foregroundColor(.gray)
-                                    Text("No items in \(selectedFilter.rawValue).")
-                                        .font(.headline).foregroundColor(.gray)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                            }
-                            .padding(.horizontal)
-                        } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 20)], spacing: 20) {
-                            ForEach(currentFilteredItems) { item in
-                                NavigationLink(destination: detailsView(for: item)) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        ZStack(alignment: .topTrailing) {
-                                            if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
-                                                AsyncImage(url: url) { img in
-                                                    img.resizable().aspectRatio(contentMode: .fill)
-                                                } placeholder: {
-                                                    Rectangle().fill(Color.gray.opacity(0.3))
-                                                }
-                                                .frame(height: 220)
-                                                .cornerRadius(12)
-                                                .clipped()
-                                            } else {
-                                                Rectangle()
-                                                    .fill(Color.gray.opacity(0.3))
-                                                    .frame(height: 220)
-                                                    .cornerRadius(12)
-                                            }
-                                            
-                                            // User Rating Badge
-                                            if let rating = item.userRating, rating > 0 {
-                                                HStack(spacing: 2) {
-                                                    Image(systemName: "star.fill")
-                                                        .font(.system(size: 10))
-                                                        .foregroundColor(.yellow)
-                                                    Text(String(format: "%.0f", rating))
-                                                        .font(.caption2)
-                                                        .fontWeight(.black)
-                                                        .foregroundColor(.white)
-                                                }
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 3)
-                                                .background(Color.black.opacity(0.85))
-                                                .cornerRadius(6)
-                                                .padding(6)
-                                            }
-                                        }
-                                        
-                                        Text(item.title)
-                                            .font(.caption).fontWeight(.bold)
-                                            .foregroundColor(.white)
-                                            .lineLimit(1)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-                }
+                activeFilterContentView
             }
             .padding(.vertical)
         }
