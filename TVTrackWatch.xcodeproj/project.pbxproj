@@ -44,6 +44,7 @@
 		100000012A1B2C3D00000024 /* OpenSubtitlesResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000024 /* OpenSubtitlesResolver.swift */; };
 		100000012A1B2C3D00000025 /* LocalTorrentStreamer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000025 /* LocalTorrentStreamer.swift */; };
 		100000012A1B2C3D00000026 /* WebTorrentPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000026 /* WebTorrentPlayerView.swift */; };
+		100000012A1B2C3D00000027 /* LibtorrentStreamEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000027 /* LibtorrentStreamEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -85,6 +86,7 @@
 		100000002A1B2C3D00000024 /* OpenSubtitlesResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/OpenSubtitlesResolver.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D00000025 /* LocalTorrentStreamer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/LocalTorrentStreamer.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D00000026 /* WebTorrentPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Player/WebTorrentPlayerView.swift; sourceTree = "<group>"; };
+		100000002A1B2C3D00000027 /* LibtorrentStreamEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/LibtorrentStreamEngine.swift; sourceTree = "<group>"; };
 		100000002A1B2C3D0000001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -147,6 +149,7 @@
 				100000002A1B2C3D00000024 /* OpenSubtitlesResolver.swift */,
 				100000002A1B2C3D00000025 /* LocalTorrentStreamer.swift */,
 				100000002A1B2C3D00000026 /* WebTorrentPlayerView.swift */,
+				100000002A1B2C3D00000027 /* LibtorrentStreamEngine.swift */,
 				100000002A1B2C3D0000001D /* Info.plist */,
 			);
 			path = TVTrackWatch;
@@ -246,6 +249,7 @@
 				100000012A1B2C3D00000024 /* OpenSubtitlesResolver.swift in Sources */,
 				100000012A1B2C3D00000025 /* LocalTorrentStreamer.swift in Sources */,
 				100000012A1B2C3D00000026 /* WebTorrentPlayerView.swift in Sources */,
+				100000012A1B2C3D00000027 /* LibtorrentStreamEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

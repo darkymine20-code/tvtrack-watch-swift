@@ -28,6 +28,11 @@ public struct AppConfig {
             tvURLTemplate: "direct_p2p_torrent"
         ),
         StreamingServer(
+            name: "iTorrent Native P2P Core",
+            movieURLTemplate: "itorrent_native_p2p",
+            tvURLTemplate: "itorrent_native_p2p"
+        ),
+        StreamingServer(
             name: "Vidking Primary",
             movieURLTemplate: "https://www.vidking.net/embed/movie/{tmdb_id}",
             tvURLTemplate: "https://www.vidking.net/embed/tv/{tmdb_id}/{season_number}/{episode_number}"
