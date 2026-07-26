@@ -62,6 +62,15 @@ public final class DataManager: ObservableObject {
         guard var current = items[key] else { return }
         current.totalEpisodes = totalEpisodes
         current.releasedEpisodes = releasedEpisodes
+        
+        if let released = releasedEpisodes, released > 0 {
+            if current.watchedEpisodes.count < released {
+                current.isWatched = false
+            } else {
+                current.isWatched = true
+            }
+        }
+        
         items[key] = current
         saveToDisk()
     }
