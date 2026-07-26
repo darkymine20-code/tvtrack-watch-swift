@@ -43,8 +43,15 @@ public final class WatchlistCategorizer {
     }
     
     // MARK: - Cast & Director Stats
-    public static func calculateTopStats(items: [LocalMediaItem], minThreshold: Int = 1) -> (topActors: [PersonStat], topDirectors: [PersonStat]) {
-        let watchedItems = items.filter { $0.isWatched || !$0.watchedEpisodes.isEmpty || $0.isFavorite || $0.isWatchlist }
+    public static func calculateTopStats(items: [LocalMediaItem], minThreshold: Int = 3) -> (topActors: [PersonStat], topDirectors: [PersonStat]) {
+        // Only count watched movies AND watched TV shows (movies + tv shows combined)
+        let watchedItems = items.filter { item in
+            if item.mediaType == "movie" {
+                return item.isWatched
+            } else {
+                return item.isWatched || !item.watchedEpisodes.isEmpty
+            }
+        }
         
         var actorCounts: [String: Int] = [:]
         var directorCounts: [String: Int] = [:]

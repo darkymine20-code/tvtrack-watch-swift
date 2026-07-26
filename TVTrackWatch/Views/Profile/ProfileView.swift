@@ -442,6 +442,9 @@ public struct ProfileView: View {
             .padding(32)
             .background(Color.black.edgesIgnoringSafeArea(.all))
         }
+        .task {
+            dataManager.fetchMissingCreditsForWatchedItems()
+        }
     }
 }
 

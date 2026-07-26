@@ -24,7 +24,7 @@ public struct TopStatsView: View {
                         Text("Not enough watch history yet.")
                             .font(.headline)
                             .foregroundColor(.gray)
-                        Text("Top actors and directors will appear here once you watch 4+ titles featuring them.")
+                        Text("Top actors and directors will appear here once you watch 3+ movies or TV shows featuring them.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)

@@ -165,6 +165,29 @@ public final class DataManager: ObservableObject {
         saveToDisk()
     }
     
+    public func fetchMissingCreditsForWatchedItems() {
+        Task {
+            let targets = items.values.filter { ($0.isWatched || !$0.watchedEpisodes.isEmpty) && $0.castNames.isEmpty }
+            for item in targets {
+                do {
+                    if item.mediaType == "tv" {
+                        let det = try await TMDbService.shared.fetchTVDetails(id: item.tmdbId)
+                        let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
+                        let directors = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
+                        updateCreditsInfo(tmdbId: item.tmdbId, mediaType: "tv", castNames: Array(cast), directorNames: Array(directors))
+                    } else {
+                        let det = try await TMDbService.shared.fetchMovieDetails(id: item.tmdbId)
+                        let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []
+                        let directors = det.credits?.crew.filter { $0.job == "Director" }.map { $0.name } ?? []
+                        updateCreditsInfo(tmdbId: item.tmdbId, mediaType: "movie", castNames: Array(cast), directorNames: Array(directors))
+                    }
+                } catch {
+                    print("Failed pre-fetching credits for \(item.title): \(error)")
+                }
+            }
+        }
+    }
+    
     public func getLocalItem(tmdbId: Int, mediaType: String) -> LocalMediaItem? {
         return items["\(mediaType)_\(tmdbId)"]
     }
