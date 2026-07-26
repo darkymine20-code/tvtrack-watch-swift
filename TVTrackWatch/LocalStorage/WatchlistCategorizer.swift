@@ -86,12 +86,12 @@ public final class WatchlistCategorizer {
         }
         
         let topActors = actorCounts
-            .filter { $0.value >= minThreshold }
+            .filter { !$0.key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.value >= minThreshold }
             .map { PersonStat(name: $0.key, count: $0.value, role: "Actor") }
             .sorted(by: { $0.count > $1.count })
         
         let topDirectors = directorCounts
-            .filter { $0.value >= minThreshold }
+            .filter { !$0.key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && $0.value >= minThreshold }
             .map { PersonStat(name: $0.key, count: $0.value, role: "Director") }
             .sorted(by: { $0.count > $1.count })
         

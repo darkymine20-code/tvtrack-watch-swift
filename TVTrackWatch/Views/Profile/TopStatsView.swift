@@ -74,8 +74,8 @@ public struct TopStatsView: View {
     public let topActors: [PersonStat]
     public let topDirectors: [PersonStat]
     
-    @State private var actorDisplayLimit = 4
-    @State private var directorDisplayLimit = 4
+    @State private var actorDisplayLimit = 6
+    @State private var directorDisplayLimit = 6
     @State private var selectedPersonName: String? = nil
     
     public init(topActors: [PersonStat], topDirectors: [PersonStat]) {
@@ -128,8 +128,10 @@ public struct TopStatsView: View {
                             }
                             .onAppear {
                                 if stat.id == visibleActors.last?.id && actorDisplayLimit < topActors.count {
-                                    withAnimation {
-                                        actorDisplayLimit += 4
+                                    DispatchQueue.main.async {
+                                        withAnimation {
+                                            actorDisplayLimit += 6
+                                        }
                                     }
                                 }
                             }
@@ -138,7 +140,7 @@ public struct TopStatsView: View {
                         if actorDisplayLimit < topActors.count {
                             Button(action: {
                                 withAnimation {
-                                    actorDisplayLimit += 4
+                                    actorDisplayLimit += 6
                                 }
                             }) {
                                 HStack {
@@ -175,8 +177,10 @@ public struct TopStatsView: View {
                             }
                             .onAppear {
                                 if stat.id == visibleDirectors.last?.id && directorDisplayLimit < topDirectors.count {
-                                    withAnimation {
-                                        directorDisplayLimit += 4
+                                    DispatchQueue.main.async {
+                                        withAnimation {
+                                            directorDisplayLimit += 6
+                                        }
                                     }
                                 }
                             }
@@ -185,7 +189,7 @@ public struct TopStatsView: View {
                         if directorDisplayLimit < topDirectors.count {
                             Button(action: {
                                 withAnimation {
-                                    directorDisplayLimit += 4
+                                    directorDisplayLimit += 6
                                 }
                             }) {
                                 HStack {
