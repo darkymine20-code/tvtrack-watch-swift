@@ -45,8 +45,32 @@ public struct WebTorrentPlayerView: UIViewRepresentable {
             <div id="player-container"></div>
 
             <script>
-                const client = new WebTorrent();
-                const magnetURI = '\(escapedMagnet)';
+                const client = new WebTorrent({
+                    tracker: {
+                        rtcConfig: {
+                            iceServers: [
+                                { urls: 'stun:stun.l.google.com:19302' },
+                                { urls: 'stun:global.stun.twilio.com:3478' }
+                            ]
+                        }
+                    }
+                });
+
+                let magnetURI = '\(escapedMagnet)';
+                const defaultTrackers = [
+                    'wss://tracker.openwebtorrent.com',
+                    'wss://tracker.btorrent.xyz',
+                    'wss://tracker.files.fm:7073/announce',
+                    'wss://tracker.webtorrent.dev'
+                ];
+
+                defaultTrackers.forEach(function(t) {
+                    if (!magnetURI.includes(encodeURIComponent(t))) {
+                        magnetURI += '&tr=' + encodeURIComponent(t);
+                    }
+                });
+
+                let isMediaLoaded = false;
 
                 client.add(magnetURI, function (torrent) {
                     document.getElementById('status').innerText = '⚡ Connecting to P2P Seeders (' + (torrent.numPeers) + ' peers)...';
@@ -60,6 +84,7 @@ public struct WebTorrentPlayerView: UIViewRepresentable {
                         if (err) {
                             document.getElementById('status').innerText = 'P2P Playback Warning: ' + err.message;
                         } else {
+                            isMediaLoaded = true;
                             setTimeout(function() {
                                 document.getElementById('status').style.opacity = '0.3';
                             }, 5000);
@@ -67,6 +92,7 @@ public struct WebTorrentPlayerView: UIViewRepresentable {
                     });
 
                     torrent.on('download', function (bytes) {
+                        isMediaLoaded = true;
                         const progress = (torrent.progress * 100).toFixed(1);
                         const speed = (torrent.downloadSpeed / (1024 * 1024)).toFixed(2);
                         document.getElementById('status').innerText = '⚡ P2P Direct Stream: ' + progress + '% (' + speed + ' MB/s, ' + torrent.numPeers + ' peers)';
@@ -74,7 +100,7 @@ public struct WebTorrentPlayerView: UIViewRepresentable {
                 });
 
                 client.on('error', function (err) {
-                    document.getElementById('status').innerText = 'P2P Connection Error: ' + err.message;
+                    document.getElementById('status').innerText = 'P2P Connection Warning: ' + err.message;
                 });
             </script>
         </body>

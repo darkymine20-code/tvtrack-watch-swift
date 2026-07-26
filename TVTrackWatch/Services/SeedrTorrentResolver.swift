@@ -83,7 +83,19 @@ public final class SeedrTorrentResolver {
                 }
                 
                 let seeders = parseSeeders(from: rawTitle)
-                let magnet = "magnet:?xt=urn:btih:\(infoHash)"
+                
+                let trackers = [
+                    "wss://tracker.openwebtorrent.com",
+                    "wss://tracker.btorrent.xyz",
+                    "wss://tracker.files.fm:7073/announce",
+                    "wss://tracker.webtorrent.dev",
+                    "udp://tracker.opentrackr.org:1337/announce",
+                    "udp://open.demonii.com:1337/announce",
+                    "udp://tracker.openbittorrent.com:80/announce",
+                    "udp://tracker.coppersurfer.tk:6969/announce"
+                ]
+                let trQuery = trackers.map { "&tr=" + ($0.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? $0) }.joined()
+                let magnet = "magnet:?xt=urn:btih:\(infoHash)\(trQuery)"
                 
                 candidates.append(TorrentioStreamCandidate(
                     titleName: rawTitle,
