@@ -37,14 +37,14 @@ public struct PersonDetailView: View {
             return combinedCredits.filter { $0.mediaType == "tv" }
         case .watched:
             return combinedCredits.filter { item in
-                dataManager.items[item.id]?.isWatched == true
+                dataManager.getLocalItem(tmdbId: item.id, mediaType: item.mediaType ?? "movie")?.isWatched == true
             }
         }
     }
     
     private var watchedCount: Int {
         combinedCredits.filter { item in
-            dataManager.items[item.id]?.isWatched == true
+            dataManager.getLocalItem(tmdbId: item.id, mediaType: item.mediaType ?? "movie")?.isWatched == true
         }.count
     }
     
@@ -220,7 +220,7 @@ public struct PersonDetailView: View {
                                                             .padding(6)
                                                         
                                                         // User Watched Checkmark Overlay
-                                                        if dataManager.items[item.id]?.isWatched == true {
+                                                        if dataManager.getLocalItem(tmdbId: item.id, mediaType: item.mediaType ?? "movie")?.isWatched == true {
                                                             Image(systemName: "checkmark.circle.fill")
                                                                 .foregroundColor(.green)
                                                                 .background(Circle().fill(Color.black))
