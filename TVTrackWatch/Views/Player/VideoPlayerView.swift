@@ -65,6 +65,7 @@ public struct VideoPlayerView: View {
     @State private var isResolvingFlussonic = false
     @State private var isResolvingSeedr = false
     @State private var seedrStatusMessage = ""
+    @State private var showTorrentSelectionSheet = false
     @State private var avPlayer: AVPlayer? = nil
     
     @State private var kurdishSubtitleURL: URL? = nil
@@ -318,11 +319,15 @@ public struct VideoPlayerView: View {
             }
         }
         .background(Color.black)
-        .onAppear {
-            if isFlussonicSelected {
-                resolveFlussonicURL()
-            } else if isTorrentioSeedrSelected {
-                resolveSeedrTorrentURL()
+        .sheet(isPresented: $showTorrentSelectionSheet) {
+            TorrentSelectionSheet(
+                title: title,
+                tmdbId: tmdbId,
+                isTV: isTV,
+                seasonNumber: seasonNumber,
+                episodeNumber: episodeNumber
+            ) { candidate in
+                processSelectedTorrentCandidate(candidate: candidate)
             }
         }
     }
@@ -426,7 +431,7 @@ public struct VideoPlayerView: View {
     
     private func resolveSeedrTorrentURL() {
         isResolvingSeedr = true
-        seedrStatusMessage = "Authenticating with Seedr Cloud..."
+        seedrStatusMessage = "Checking Seedr Cloud storage..."
         removeTimeObserver()
         avPlayer?.pause()
         avPlayer = nil
@@ -445,16 +450,6 @@ public struct VideoPlayerView: View {
         let year = releaseYear ?? Calendar.current.component(.year, from: Date())
         
         Task {
-            // Fetch IMDb ID if needed
-            var resolvedImdbId = await TMDbService.shared.fetchIMDbId(mediaType: isTV ? "tv" : "movie", id: tmdbId) ?? ""
-            if resolvedImdbId.isEmpty {
-                resolvedImdbId = "tt\(tmdbId)"
-            }
-            
-            await MainActor.run {
-                self.seedrStatusMessage = "Checking if \(cleanTitle) already exists on Seedr..."
-            }
-            
             guard let token = await SeedrTorrentResolver.shared.getSeedrAccessToken() else {
                 await MainActor.run {
                     self.seedrStatusMessage = "Failed to authenticate with Seedr account."
@@ -463,7 +458,7 @@ public struct VideoPlayerView: View {
                 return
             }
             
-            // Rule: Check if exact movie/show exists in Seedr account
+            // Check if exact title exists on Seedr
             if let existingURL = await SeedrTorrentResolver.shared.checkExistingStream(token: token, title: cleanTitle) {
                 await MainActor.run {
                     self.seedrStatusMessage = "Found in Seedr Cloud! Loading stream..."
@@ -472,57 +467,51 @@ public struct VideoPlayerView: View {
                 return
             }
             
-            // Rule: Fetch candidate torrents <= 2.9 GB from Torrentio
+            // Open user torrent selection sheet
             await MainActor.run {
-                self.seedrStatusMessage = "Searching Torrentio for torrents <= 2.9 GB..."
+                self.showTorrentSelectionSheet = true
             }
-            
-            let candidates = await SeedrTorrentResolver.shared.fetchTorrentioCandidates(
-                imdbId: resolvedImdbId,
-                isTV: isTV,
-                season: seasonNumber,
-                episode: episodeNumber
-            )
-            
-            guard let best = candidates.first else {
-                await MainActor.run {
-                    self.seedrStatusMessage = "No torrents <= 2.9 GB found on Torrentio."
-                    self.isResolvingSeedr = false
+        }
+    }
+    
+    private func processSelectedTorrentCandidate(candidate: TorrentioStreamCandidate) {
+        isResolvingSeedr = true
+        seedrStatusMessage = "Connecting to Seedr Cloud..."
+        removeTimeObserver()
+        avPlayer?.pause()
+        avPlayer = nil
+        
+        let cleanTitle: String
+        if isTV {
+            if let index = title.range(of: " S")?.lowerBound {
+                cleanTitle = String(title[..<index])
+            } else {
+                cleanTitle = title
+            }
+        } else {
+            cleanTitle = title
+        }
+        
+        let year = releaseYear ?? Calendar.current.component(.year, from: Date())
+        
+        Task {
+            if let directURL = await SeedrTorrentResolver.shared.processUserSelectedCandidate(
+                candidate: candidate,
+                title: cleanTitle,
+                onProgress: { status in
+                    DispatchQueue.main.async {
+                        self.seedrStatusMessage = status
+                    }
                 }
-                return
-            }
-            
-            // Rule: Wipe out Seedr account to make space
-            await MainActor.run {
-                self.seedrStatusMessage = "Wiping Seedr storage to make space (3GB)..."
-            }
-            await SeedrTorrentResolver.shared.wipeSeedrAccount(token: token)
-            
-            // Rule: Send selected torrent magnet
-            await MainActor.run {
-                self.seedrStatusMessage = "Sending torrent (\(formatSizeBytes(best.sizeBytes))) to Seedr..."
-            }
-            let added = await SeedrTorrentResolver.shared.addMagnetToSeedr(token: token, magnetURL: best.magnetURL)
-            guard added else {
-                await MainActor.run {
-                    self.seedrStatusMessage = "Failed to add torrent to Seedr."
-                    self.isResolvingSeedr = false
-                }
-                return
-            }
-            
-            // Rule: Poll Seedr until ready & play stream
-            await MainActor.run {
-                self.seedrStatusMessage = "Downloading/converting stream on Seedr..."
-            }
-            
-            if let directURL = await SeedrTorrentResolver.shared.pollForStreamURL(token: token) {
+            ) {
                 await MainActor.run {
                     self.startPlayingDirectURL(targetURL: directURL, cleanTitle: cleanTitle, year: year)
                 }
             } else {
                 await MainActor.run {
-                    self.seedrStatusMessage = "Seedr conversion timed out."
+                    if self.seedrStatusMessage.isEmpty || self.seedrStatusMessage.contains("Downloading") {
+                        self.seedrStatusMessage = "Seedr conversion timed out. Try a torrent stream with higher seeders."
+                    }
                     self.isResolvingSeedr = false
                 }
             }

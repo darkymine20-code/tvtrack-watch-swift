@@ -254,19 +254,72 @@ public final class SeedrTorrentResolver {
     }
     
     // MARK: - 6. Poll Seedr for Stream URL
-    public func pollForStreamURL(token: String, maxPolls: Int = 20) async -> URL? {
-        for _ in 0..<maxPolls {
-            try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+    public func pollForStreamURL(token: String, maxPolls: Int = 90, onProgress: ((String) -> Void)? = nil) async -> URL? {
+        for attempt in 0..<maxPolls {
+            try? await Task.sleep(nanoseconds: 2_500_000_000) // 2.5 seconds
             
-            if let root = await fetchRootFolder(token: token), let folders = root.folders, !folders.isEmpty {
-                for folder in folders {
-                    if let fileURL = await fetchFirstVideoURLInFolder(token: token, folderId: folder.id) {
-                        return fileURL
+            if let root = await fetchRootFolder(token: token) {
+                // 1. Check if folder created and has video files
+                if let folders = root.folders, !folders.isEmpty {
+                    for folder in folders {
+                        if let fileURL = await fetchFirstVideoURLInFolder(token: token, folderId: folder.id) {
+                            onProgress?("Ready! Direct stream URL acquired.")
+                            return fileURL
+                        }
                     }
+                }
+                
+                // 2. Check if active torrent is downloading
+                if let torrents = root.torrents, let firstT = torrents.first {
+                    let progress = firstT.progress ?? 0
+                    onProgress?("Downloading on Seedr Cloud: \(progress)%...")
+                } else {
+                    onProgress?("Converting torrent on Seedr Cloud (\(attempt + 1)/\(maxPolls))...")
                 }
             }
         }
         return nil
+    }
+    
+    // MARK: - Process Selected Candidate
+    public func processUserSelectedCandidate(candidate: TorrentioStreamCandidate, title: String, onProgress: @escaping (String) -> Void) async -> URL? {
+        onProgress("Authenticating with Seedr Cloud...")
+        guard let token = await getSeedrAccessToken() else {
+            onProgress("Failed to authenticate with Seedr account.")
+            return nil
+        }
+        
+        // Step 1: Check existing
+        onProgress("Checking if \(title) already exists on Seedr...")
+        if let existingURL = await checkExistingStream(token: token, title: title) {
+            onProgress("Found on Seedr Cloud! Loading stream...")
+            return existingURL
+        }
+        
+        // Step 2: Wipe Seedr account
+        onProgress("Wiping Seedr storage to make space (3GB)...")
+        await wipeSeedrAccount(token: token)
+        
+        // Step 3: Send magnet
+        onProgress("Sending torrent (\(formatSizeBytes(candidate.sizeBytes))) to Seedr...")
+        let added = await addMagnetToSeedr(token: token, magnetURL: candidate.magnetURL)
+        guard added else {
+            onProgress("Failed to add torrent to Seedr.")
+            return nil
+        }
+        
+        // Step 4: Poll Seedr with live progress
+        return await pollForStreamURL(token: token, maxPolls: 90, onProgress: onProgress)
+    }
+    
+    private func formatSizeBytes(_ bytes: Int64) -> String {
+        let gb = Double(bytes) / (1024.0 * 1024.0 * 1024.0)
+        if gb >= 1.0 {
+            return String(format: "%.2f GB", gb)
+        } else {
+            let mb = Double(bytes) / (1024.0 * 1024.0)
+            return String(format: "%.0f MB", mb)
+        }
     }
     
     // MARK: - Internal Utilities
@@ -289,7 +342,6 @@ public final class SeedrTorrentResolver {
             
             let videoExtensions = [".mp4", ".mkv", ".avi", ".mov", ".m4v"]
             
-            // Filter video files and pick largest
             var bestFileURL: URL? = nil
             var maxFileSize: Int64 = 0
             
@@ -301,7 +353,6 @@ public final class SeedrTorrentResolver {
                     if size >= maxFileSize {
                         maxFileSize = size
                         
-                        // Seedr file URL construction: https://www.seedr.cc/api/file/{id}/url
                         if let fileId = file["id"] as? Int {
                             let fileUrlReq = URL(string: "https://www.seedr.cc/api/file/\(fileId)/url?access_token=\(token)")
                             if let fReq = fileUrlReq,
@@ -331,30 +382,22 @@ public final class SeedrTorrentResolver {
             return nil
         }
         
-        // Step 1: Check if exact movie/show already exists in Seedr
         if let existingURL = await checkExistingStream(token: token, title: title) {
-            print("Movie/Show already exists on Seedr account! Returning stream link directly.")
             return existingURL
         }
         
-        // Step 2: Fetch Torrentio candidate torrents <= 2.9 GB
         let candidates = await fetchTorrentioCandidates(imdbId: imdbId, isTV: isTV, season: season, episode: episode)
         guard let bestCandidate = candidates.first else {
-            print("No suitable torrent candidate <= 2.9 GB found on Torrentio.")
             return nil
         }
         
-        // Step 3: Wipe Seedr account to free up 3GB space
         await wipeSeedrAccount(token: token)
         
-        // Step 4: Send selected torrent magnet to Seedr
         let added = await addMagnetToSeedr(token: token, magnetURL: bestCandidate.magnetURL)
         guard added else {
-            print("Failed to add magnet to Seedr.")
             return nil
         }
         
-        // Step 5: Poll Seedr for conversion & return direct video stream link
         return await pollForStreamURL(token: token)
     }
 }
