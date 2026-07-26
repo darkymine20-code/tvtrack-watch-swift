@@ -65,6 +65,14 @@ public struct VideoPlayerView: View {
     @State private var isResolvingFlussonic = false
     @State private var avPlayer: AVPlayer? = nil
     
+    @State private var kurdishSubtitleURL: URL? = nil
+    @State private var englishSubtitleURL: URL? = nil
+    @State private var kurdishSubtitleCues: [SubtitleCue] = []
+    @State private var englishSubtitleCues: [SubtitleCue] = []
+    @State private var selectedSubtitleLanguage: String = "Off"
+    @State private var activeSubtitleText: String = ""
+    @State private var timeObserverToken: Any? = nil
+    
     @Environment(\.dismiss) var dismiss
     
     public init(title: String, tmdbId: Int, releaseYear: Int? = nil, isTV: Bool = false, seasonNumber: Int? = nil, episodeNumber: Int? = nil) {
@@ -105,6 +113,62 @@ public struct VideoPlayerView: View {
                 
                 Spacer()
                 
+                // Subtitle Selection Menu
+                Menu {
+                    Button(action: {
+                        selectedSubtitleLanguage = "Off"
+                        activeSubtitleText = ""
+                    }) {
+                        HStack {
+                            Text("Off")
+                            if selectedSubtitleLanguage == "Off" {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    
+                    Button(action: {
+                        selectedSubtitleLanguage = "Kurdish (Ku)"
+                    }) {
+                        HStack {
+                            Text("Kurdish (Ku)")
+                            if kurdishSubtitleURL != nil {
+                                Text("✓")
+                            }
+                            if selectedSubtitleLanguage == "Kurdish (Ku)" {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    
+                    Button(action: {
+                        selectedSubtitleLanguage = "English (En)"
+                    }) {
+                        HStack {
+                            Text("English (En)")
+                            if englishSubtitleURL != nil {
+                                Text("✓")
+                            }
+                            if selectedSubtitleLanguage == "English (En)" {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: selectedSubtitleLanguage == "Off" ? "captions.bubble" : "captions.bubble.fill")
+                        Text(selectedSubtitleLanguage == "Off" ? "Subtitles" : selectedSubtitleLanguage)
+                            .font(.subheadline)
+                        Image(systemName: "chevron.down")
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(selectedSubtitleLanguage != "Off" ? Color.blue.opacity(0.3) : Color.white.opacity(0.15))
+                    .foregroundColor(selectedSubtitleLanguage != "Off" ? .blue : .white)
+                    .cornerRadius(8)
+                }
+                .padding(.trailing, 8)
+                
                 // Server Selector Dropdown
                 Menu {
                     ForEach(streamingEngine.availableServers) { server in
@@ -113,6 +177,7 @@ public struct VideoPlayerView: View {
                             if server.name.contains("Flussonic") || server.movieURLTemplate == "flussonic_direct" {
                                 resolveFlussonicURL()
                             } else {
+                                removeTimeObserver()
                                 avPlayer?.pause()
                                 avPlayer = nil
                                 directVideoURL = nil
@@ -141,6 +206,7 @@ public struct VideoPlayerView: View {
                 }
                 
                 Button(action: {
+                    removeTimeObserver()
                     avPlayer?.pause()
                     dismiss()
                 }) {
@@ -164,18 +230,34 @@ public struct VideoPlayerView: View {
                             Text("Probing Flussonic high-speed servers...")
                                 .font(.headline)
                                 .foregroundColor(.white)
-                            Text("Testing primary and backup mirrors for 200 OK...")
+                            Text("Testing video and subtitle mirrors for 200 OK...")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black)
                     } else if let player = avPlayer {
-                        VideoPlayer(player: player)
-                            .ignoresSafeArea()
-                            .onDisappear {
-                                player.pause()
+                        ZStack(alignment: .bottom) {
+                            VideoPlayer(player: player)
+                                .ignoresSafeArea()
+                                .onDisappear {
+                                    removeTimeObserver()
+                                    player.pause()
+                                }
+                            
+                            if !activeSubtitleText.isEmpty {
+                                Text(activeSubtitleText)
+                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(Color.black.opacity(0.8))
+                                    .cornerRadius(10)
+                                    .padding(.bottom, 60)
+                                    .shadow(radius: 6)
                             }
+                        }
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "exclamationmark.triangle.fill")
@@ -218,12 +300,12 @@ public struct VideoPlayerView: View {
     
     private func resolveFlussonicURL() {
         isResolvingFlussonic = true
+        removeTimeObserver()
         avPlayer?.pause()
         avPlayer = nil
         
         let cleanTitle: String
         if isTV {
-            // Strip out S01E01 suffix if passed in title
             if let index = title.range(of: " S")?.lowerBound {
                 cleanTitle = String(title[..<index])
             } else {
@@ -255,8 +337,92 @@ public struct VideoPlayerView: View {
                 self.directVideoURL = targetURL
                 let newPlayer = AVPlayer(url: targetURL)
                 self.avPlayer = newPlayer
+                self.setupTimeObserver(player: newPlayer)
                 self.isResolvingFlussonic = false
                 newPlayer.play()
+            }
+            
+            resolveFlussonicSubtitles(targetURL: targetURL, cleanTitle: cleanTitle, year: year)
+        }
+    }
+    
+    private func resolveFlussonicSubtitles(targetURL: URL?, cleanTitle: String, year: Int) {
+        Task {
+            let subResult = await FlussonicSubtitleResolver.shared.resolveSubtitles(
+                title: cleanTitle,
+                year: year,
+                isTV: isTV,
+                season: seasonNumber,
+                episode: episodeNumber,
+                activeStreamURL: targetURL
+            )
+            
+            await MainActor.run {
+                self.kurdishSubtitleURL = subResult.kurdishURL
+                self.englishSubtitleURL = subResult.englishURL
+            }
+            
+            if let kuURL = subResult.kurdishURL {
+                let parsed = await FlussonicSubtitleResolver.shared.fetchAndParseSubtitle(from: kuURL)
+                await MainActor.run {
+                    self.kurdishSubtitleCues = parsed
+                    if self.selectedSubtitleLanguage == "Off" && !parsed.isEmpty {
+                        self.selectedSubtitleLanguage = "Kurdish (Ku)"
+                    }
+                }
+            }
+            
+            if let enURL = subResult.englishURL {
+                let parsed = await FlussonicSubtitleResolver.shared.fetchAndParseSubtitle(from: enURL)
+                await MainActor.run {
+                    self.englishSubtitleCues = parsed
+                    if self.selectedSubtitleLanguage == "Off" && self.kurdishSubtitleCues.isEmpty && !parsed.isEmpty {
+                        self.selectedSubtitleLanguage = "English (En)"
+                    }
+                }
+            }
+        }
+    }
+    
+    private func setupTimeObserver(player: AVPlayer) {
+        removeTimeObserver()
+        let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
+        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak player] time in
+            guard player != nil else { return }
+            let currentTime = time.seconds
+            self.updateActiveSubtitle(currentTime: currentTime)
+        }
+    }
+    
+    private func removeTimeObserver() {
+        if let token = timeObserverToken, let player = avPlayer {
+            player.removeTimeObserver(token)
+            timeObserverToken = nil
+        }
+    }
+    
+    private func updateActiveSubtitle(currentTime: TimeInterval) {
+        guard selectedSubtitleLanguage != "Off" else {
+            if !activeSubtitleText.isEmpty { activeSubtitleText = "" }
+            return
+        }
+        
+        let targetCues: [SubtitleCue]
+        if selectedSubtitleLanguage == "Kurdish (Ku)" {
+            targetCues = kurdishSubtitleCues
+        } else if selectedSubtitleLanguage == "English (En)" {
+            targetCues = englishSubtitleCues
+        } else {
+            targetCues = []
+        }
+        
+        if let matching = targetCues.first(where: { currentTime >= $0.startTime && currentTime <= $0.endTime }) {
+            if activeSubtitleText != matching.text {
+                activeSubtitleText = matching.text
+            }
+        } else {
+            if !activeSubtitleText.isEmpty {
+                activeSubtitleText = ""
             }
         }
     }
