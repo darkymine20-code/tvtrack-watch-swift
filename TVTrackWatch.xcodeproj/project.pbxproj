@@ -46,6 +46,7 @@
 		100000012A1B2C3D00000026 /* WebTorrentPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000026 /* WebTorrentPlayerView.swift */; };
 		100000012A1B2C3D00000027 /* LibtorrentStreamEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000027 /* LibtorrentStreamEngine.swift */; };
 		100000012A1B2C3D00000028 /* ITorrentStreamView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000002A1B2C3D00000028 /* ITorrentStreamView.swift */; };
+		AA0000012A1B2C3D00000001 /* SwiftTorrent in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000002A1B2C3D00000001 /* SwiftTorrent */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -97,6 +98,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0000012A1B2C3D00000001 /* SwiftTorrent in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,6 +175,9 @@
 			dependencies = (
 			);
 			name = TVTrackWatch;
+			packageProductDependencies = (
+				AA0000002A1B2C3D00000001 /* SwiftTorrent */,
+			);
 			productName = TVTrackWatch;
 			productReference = 100000002A1B2C3D00000000 /* TVTrackWatch.app */;
 			productType = "com.apple.product-type.application";
@@ -204,6 +209,9 @@
 			productRefGroup = 100000032A1B2C3D00000000;
 			projectDirPath = "";
 			projectRoot = "";
+			packageReferences = (
+				AA0000032A1B2C3D00000001 /* XCRemoteSwiftPackageReference "swift-torrent" */,
+			);
 			targets = (
 				100000042A1B2C3D00000000 /* TVTrackWatch */,
 			);
@@ -354,6 +362,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA0000032A1B2C3D00000001 /* XCRemoteSwiftPackageReference "swift-torrent" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/warppipe/swift-torrent.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA0000002A1B2C3D00000001 /* SwiftTorrent */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000032A1B2C3D00000001 /* XCRemoteSwiftPackageReference "swift-torrent" */;
+			productName = SwiftTorrent;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 100000072A1B2C3D00000000 /* Project object */;
 }
