@@ -3,8 +3,19 @@ import UniformTypeIdentifiers
 
 public struct ProfileView: View {
     @ObservedObject var dataManager = DataManager.shared
+    @State private var selectedFilter: ProfileFilter = .watchedMovies
     @State private var selectedSortOption: ProfileSortOption = .dateWatchedNewest
     @State private var displayLimit = 18
+    
+    @State private var isImportOptionsPresented = false
+    @State private var isCSVImporterPresented = false
+    @State private var isPasteSheetPresented = false
+    @State private var pastedCSVText = ""
+    @State private var isImporting = false
+    @State private var importProgressMessage = ""
+    @State private var importCurrent = 0
+    @State private var importTotal = 0
+    @State private var importSummary: IMDbImportResult? = nil
     
     public enum ProfileFilter: String, CaseIterable, Identifiable {
         case watchedMovies = "Watched Movies"
