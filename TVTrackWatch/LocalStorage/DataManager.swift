@@ -57,6 +57,15 @@ public final class DataManager: ObservableObject {
         saveToDisk()
     }
     
+    public func updateEpisodeCounts(tmdbId: Int, totalEpisodes: Int?, releasedEpisodes: Int?) {
+        let key = "tv_\(tmdbId)"
+        guard var current = items[key] else { return }
+        current.totalEpisodes = totalEpisodes
+        current.releasedEpisodes = releasedEpisodes
+        items[key] = current
+        saveToDisk()
+    }
+    
     // Fix 5: When an episode is marked as watched, automatically save show in Watchlist
     public func toggleEpisodeWatched(
         tvId: Int,

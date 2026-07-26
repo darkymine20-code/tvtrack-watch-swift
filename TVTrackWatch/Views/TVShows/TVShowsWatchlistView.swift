@@ -108,8 +108,13 @@ struct TVShowPosterCard: View {
     }
     
     private var totalEpisodesCount: Int {
-        // Default estimate 10 per season or derived from state
-        max(watchedCount + 4, 10)
+        if let released = item.releasedEpisodes, released > 0 {
+            return max(watchedCount, released)
+        }
+        if let total = item.totalEpisodes, total > 0 {
+            return max(watchedCount, total)
+        }
+        return max(watchedCount, 1)
     }
     
     private var progressRatio: Double {

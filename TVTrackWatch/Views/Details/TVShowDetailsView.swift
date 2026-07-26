@@ -519,6 +519,26 @@ public struct TVShowDetailsView: View {
                 let castNames = det.credits?.cast.prefix(10).map { $0.name } ?? []
                 let directorNames = det.credits?.crew.filter { $0.job == "Executive Producer" || $0.job == "Director" || $0.job == "Creator" }.map { $0.name } ?? []
                 dataManager.updateCreditsInfo(tmdbId: show.id, mediaType: "tv", castNames: Array(castNames), directorNames: Array(directorNames))
+                
+                // Calculate total released episodes count
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                let todayStr = formatter.string(from: Date())
+                var releasedCount = 0
+                if let seasons = det.seasons {
+                    for season in seasons where season.seasonNumber > 0 {
+                        if let date = season.airDate, !date.isEmpty, date <= todayStr {
+                            releasedCount += season.episodeCount ?? 0
+                        } else if season.airDate == nil && det.status == "Ended" {
+                            releasedCount += season.episodeCount ?? 0
+                        }
+                    }
+                }
+                if releasedCount == 0, let total = det.numberOfEpisodes {
+                    releasedCount = total
+                }
+                dataManager.updateEpisodeCounts(tmdbId: show.id, totalEpisodes: det.numberOfEpisodes, releasedEpisodes: releasedCount)
+                
                 loadSeasonEpisodes(seasonNumber: 1)
                 
                 var resolvedId = det.externalIds?.imdbId

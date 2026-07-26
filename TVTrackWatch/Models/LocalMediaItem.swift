@@ -29,6 +29,10 @@ public struct LocalMediaItem: Codable, Identifiable, Hashable {
     // Metadata for stats: Cast names & Director names
     public var castNames: [String]
     public var directorNames: [String]
+    
+    // Episode Counts for TV Shows
+    public var totalEpisodes: Int?
+    public var releasedEpisodes: Int?
 
     public init(
         tmdbId: Int,
@@ -48,7 +52,9 @@ public struct LocalMediaItem: Codable, Identifiable, Hashable {
         playbackProgressSeconds: Double = 0.0,
         watchedEpisodes: [String: String] = [:],
         castNames: [String] = [],
-        directorNames: [String] = []
+        directorNames: [String] = [],
+        totalEpisodes: Int? = nil,
+        releasedEpisodes: Int? = nil
     ) {
         self.tmdbId = tmdbId
         self.mediaType = mediaType
@@ -68,5 +74,7 @@ public struct LocalMediaItem: Codable, Identifiable, Hashable {
         self.watchedEpisodes = watchedEpisodes
         self.castNames = castNames
         self.directorNames = directorNames
+        self.totalEpisodes = totalEpisodes
+        self.releasedEpisodes = releasedEpisodes
     }
 }
