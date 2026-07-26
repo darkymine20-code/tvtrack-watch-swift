@@ -28,9 +28,13 @@ public final class WatchlistCategorizer {
         for item in tvItems {
             let watchedCount = item.watchedEpisodes.count
             let released = item.releasedEpisodes ?? 0
+            let total = item.totalEpisodes ?? 0
             
             if watchedCount == 0 {
                 haveNotStarted.append(item)
+            } else if (released > 0 && watchedCount >= released) || item.isWatched || (total > 0 && watchedCount >= total) {
+                // User HAS watched all currently aired episodes (e.g. Silo 24/24) -> MUST be in Waiting for New Episodes!
+                waitingForNewEpisodes.append(item)
             } else if released > 0 && watchedCount < released {
                 // User HAS unwatched released episodes -> Watch Next or Not Watched 30 Days
                 if let lastWatched = item.lastWatchedDate, now.timeIntervalSince(lastWatched) > thirtyDaysSeconds {
@@ -38,11 +42,6 @@ public final class WatchlistCategorizer {
                 } else {
                     watchNext.append(item)
                 }
-            } else if released > 0 && watchedCount >= released {
-                // User has watched all currently aired episodes -> Waiting for New Episodes
-                waitingForNewEpisodes.append(item)
-            } else if item.isWatched {
-                waitingForNewEpisodes.append(item)
             } else if let lastWatched = item.lastWatchedDate, now.timeIntervalSince(lastWatched) > thirtyDaysSeconds {
                 notWatched30Days.append(item)
             } else {
