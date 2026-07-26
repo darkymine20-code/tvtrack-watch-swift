@@ -5,7 +5,10 @@ public struct ProfileView: View {
     @ObservedObject var dataManager = DataManager.shared
     @State private var selectedFilter: ProfileFilter = .watchedMovies
     
+    @State private var isImportOptionsPresented = false
     @State private var isCSVImporterPresented = false
+    @State private var isPasteSheetPresented = false
+    @State private var pastedCSVText = ""
     @State private var isImporting = false
     @State private var importProgressMessage = ""
     @State private var importCurrent = 0
@@ -25,7 +28,7 @@ public struct ProfileView: View {
             case .watchedMovies: return "film.fill"
             case .watchedTV: return "tv.fill"
             case .favoriteMovies: return "heart.fill"
-            case .favoriteTV: return "heart.circle.fill"
+            case .favoriteTV: return "star.fill"
             case .stoppedWatching: return "archivebox.fill"
             }
         }
@@ -149,189 +152,98 @@ public struct ProfileView: View {
                 }
                 .padding(.horizontal)
                 
-                // Dashboard Overview
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Dashboard Overview")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal)
-                    
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        ProfileStatCard(title: "Watched Movies", count: watchedMovies.count, icon: "film.fill", color: .purple, isSelected: selectedFilter == .watchedMovies) {
-                            selectedFilter = .watchedMovies
-                        }
-                        
-                        ProfileStatCard(title: "Watched TV Shows", count: watchedTV.count, icon: "tv.fill", color: .blue, isSelected: selectedFilter == .watchedTV) {
-                            selectedFilter = .watchedTV
-                        }
-                        
-                        ProfileStatCard(title: "Favorite Movies", count: favoriteMovies.count, icon: "heart.fill", color: .pink, isSelected: selectedFilter == .favoriteMovies) {
-                            selectedFilter = .favoriteMovies
-                        }
-                        
-                        ProfileStatCard(title: "Favorite TV Shows", count: favoriteTV.count, icon: "star.fill", color: .yellow, isSelected: selectedFilter == .favoriteTV) {
-                            selectedFilter = .favoriteTV
-                        }
+                // Dashboard Counters Grid (Clickable Category Filters)
+                HStack(spacing: 12) {
+                    CounterCardView(filter: .watchedMovies, count: watchedMovies.count, isSelected: selectedFilter == .watchedMovies) {
+                        selectedFilter = .watchedMovies
                     }
-                    .padding(.horizontal)
-                    
-                    // Stopped Watching Filter Card
-                    GlassCardView {
-                        HStack {
-                            Image(systemName: "hand.raised.slash.fill")
-                                .foregroundColor(.red)
-                                .font(.title3)
-                            Text("Stopped Watching Archive")
-                                .font(.headline)
-                            Spacer()
-                            Text("\(stoppedWatchingArchive.count) items")
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.red)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedFilter = .stoppedWatching
-                        }
+                    CounterCardView(filter: .watchedTV, count: watchedTV.count, isSelected: selectedFilter == .watchedTV) {
+                        selectedFilter = .watchedTV
                     }
-                    .padding(.horizontal)
+                    CounterCardView(filter: .favoriteMovies, count: favoriteMovies.count, isSelected: selectedFilter == .favoriteMovies) {
+                        selectedFilter = .favoriteMovies
+                    }
+                    CounterCardView(filter: .favoriteTV, count: favoriteTV.count, isSelected: selectedFilter == .favoriteTV) {
+                        selectedFilter = .favoriteTV
+                    }
+                    CounterCardView(filter: .stoppedWatching, count: stoppedWatchingArchive.count, isSelected: selectedFilter == .stoppedWatching) {
+                        selectedFilter = .stoppedWatching
+                    }
                 }
+                .padding(.horizontal)
                 
-                // Actor & Director Stats Section
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Cast & Crew Breakdown")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal)
-                    
-                    HStack(alignment: .top, spacing: 20) {
-                        // Top Actors
-                        GlassCardView {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Image(systemName: "person.3.fill")
-                                        .foregroundColor(.cyan)
-                                    Text("Top Actors")
-                                        .font(.headline)
-                                }
-                                Divider()
-                                if stats.topActors.isEmpty {
-                                    Text("No actor stats available yet. View movie details to track top cast!")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                } else {
-                                    ForEach(stats.topActors) { actor in
-                                        HStack {
-                                            Text(actor.name)
-                                                .font(.subheadline)
-                                                .fontWeight(.medium)
-                                            Spacer()
-                                            Text("\(actor.count) watched")
-                                                .font(.caption)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(Color.cyan.opacity(0.2))
-                                                .foregroundColor(.cyan)
-                                                .cornerRadius(8)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Top Directors
-                        GlassCardView {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack {
-                                    Image(systemName: "video.fill")
-                                        .foregroundColor(.orange)
-                                    Text("Top Directors")
-                                        .font(.headline)
-                                }
-                                Divider()
-                                if stats.topDirectors.isEmpty {
-                                    Text("No director stats available yet. View movie details to track directors!")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                } else {
-                                    ForEach(stats.topDirectors) { director in
-                                        HStack {
-                                            Text(director.name)
-                                                .font(.subheadline)
-                                                .fontWeight(.medium)
-                                            Spacer()
-                                            Text("\(director.count) watched")
-                                                .font(.caption)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(Color.orange.opacity(0.2))
-                                                .foregroundColor(.orange)
-                                                .cornerRadius(8)
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                // Cast & Director Stats
+                TopStatsView(topActors: stats.topActors, topDirectors: stats.topDirectors)
+                
+                // Active Selected Category Collection Grid
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Image(systemName: selectedFilter.icon)
+                            .foregroundColor(selectedFilter.color)
+                            .font(.title2)
+                        Text("\(selectedFilter.rawValue) (\(currentFilteredItems.count))")
+                            .font(.title2).fontWeight(.black)
+                        Spacer()
                     }
                     .padding(.horizontal)
-                }
-                
-                // Filtered List View
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(selectedFilter.title)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal)
                     
                     if currentFilteredItems.isEmpty {
-                        VStack(spacing: 12) {
-                            Image(systemName: "tray")
-                                .font(.system(size: 48))
-                                .foregroundColor(.gray)
-                            Text("No items found in this section")
-                                .font(.headline)
-                                .foregroundColor(.secondary)
+                        GlassCardView {
+                            VStack(spacing: 8) {
+                                Image(systemName: "tray")
+                                    .font(.largeTitle).foregroundColor(.gray)
+                                Text("No items in \(selectedFilter.rawValue).")
+                                    .font(.headline).foregroundColor(.gray)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 40)
+                        .padding(.horizontal)
                     } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 16)], spacing: 16) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 20)], spacing: 20) {
                             ForEach(currentFilteredItems) { item in
                                 NavigationLink(destination: detailsView(for: item)) {
-                                    ZStack(alignment: .topTrailing) {
-                                        if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
-                                            AsyncImage(url: url) { img in
-                                                img.resizable().aspectRatio(contentMode: .fill)
-                                            } placeholder: {
-                                                Rectangle().fill(Color.gray.opacity(0.3))
-                                            }
-                                            .frame(height: 220)
-                                            .cornerRadius(12)
-                                            .clipped()
-                                        } else {
-                                            Rectangle()
-                                                .fill(Color.gray.opacity(0.3))
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ZStack(alignment: .topTrailing) {
+                                            if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
+                                                AsyncImage(url: url) { img in
+                                                    img.resizable().aspectRatio(contentMode: .fill)
+                                                } placeholder: {
+                                                    Rectangle().fill(Color.gray.opacity(0.3))
+                                                }
                                                 .frame(height: 220)
                                                 .cornerRadius(12)
+                                                .clipped()
+                                            } else {
+                                                Rectangle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .frame(height: 220)
+                                                    .cornerRadius(12)
+                                            }
+                                            
+                                            // User Rating Badge
+                                            if let rating = item.userRating, rating > 0 {
+                                                HStack(spacing: 2) {
+                                                    Image(systemName: "star.fill")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(.yellow)
+                                                    Text(String(format: "%.0f", rating))
+                                                        .font(.caption2)
+                                                        .fontWeight(.black)
+                                                        .foregroundColor(.white)
+                                                }
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(Color.black.opacity(0.85))
+                                                .cornerRadius(6)
+                                                .padding(6)
+                                            }
                                         }
                                         
-                                        // User Rating Badge
-                                        if let rating = item.userRating, rating > 0 {
-                                            HStack(spacing: 2) {
-                                                Image(systemName: "star.fill")
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.yellow)
-                                                Text(String(format: "%.0f", rating))
-                                                    .font(.caption2)
-                                                    .fontWeight(.black)
-                                                    .foregroundColor(.black)
-                                            }
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 3)
-                                            .background(Color.yellow)
-                                            .cornerRadius(8)
-                                            .padding(6)
-                                        }
+                                        Text(item.title)
+                                            .font(.caption).fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                            .lineLimit(1)
                                     }
                                 }
                             }
@@ -344,21 +256,32 @@ public struct ProfileView: View {
         }
         .fileImporter(
             isPresented: $isCSVImporterPresented,
-            allowedContentTypes: [.item],
+            allowedContentTypes: [.item, .content, .data, .plainText, .commaSeparatedText],
             allowsMultipleSelection: false
         ) { result in
             switch result {
             case .success(let urls):
                 guard let url = urls.first else { return }
                 let accessing = url.startAccessingSecurityScopedResource()
-                defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+                defer {
+                    if accessing {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                }
                 
                 var content = ""
-                if let text = try? String(contentsOf: url, encoding: .utf8) { content = text }
-                else if let text = try? String(contentsOf: url, encoding: .ascii) { content = text }
+                if let text = try? String(contentsOf: url, encoding: .utf8) {
+                    content = text
+                } else if let text = try? String(contentsOf: url, encoding: .ascii) {
+                    content = text
+                } else if let text = try? String(contentsOf: url, encoding: .isoLatin1) {
+                    content = text
+                } else if let data = try? Data(contentsOf: url), let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .ascii) {
+                    content = text
+                }
                 
                 if !content.isEmpty {
-                    isImporting = true
+                    self.isImporting = true
                     Task {
                         let res = await IMDbCSVImporter.shared.importCSVData(content) { current, total, title in
                             DispatchQueue.main.async {
@@ -367,7 +290,9 @@ public struct ProfileView: View {
                                 self.importProgressMessage = "Importing (\(current)/\(total)): \(title)"
                             }
                         }
-                        DispatchQueue.main.async { self.importSummary = res }
+                        DispatchQueue.main.async {
+                            self.importSummary = res
+                        }
                     }
                 }
             case .failure(let error):
