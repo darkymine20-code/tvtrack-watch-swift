@@ -117,16 +117,16 @@ public final class LibtorrentStreamEngine: ObservableObject {
             if let p2pData = await fetchP2PMediaData(infoHash: infoHash) {
                 self.activeMediaData = p2pData
                 onStatus("P2P Media Buffer Complete! Piping to localhost:8080...")
-                return URL(string: "http://127.0.0.1:8080/stream")
+                return URL(string: "http://127.0.0.1:8080/stream.mp4")
             }
             try? await Task.sleep(nanoseconds: 600_000_000)
         }
         
         if let data = activeMediaData, !data.isEmpty {
-            return URL(string: "http://127.0.0.1:8080/stream")
+            return URL(string: "http://127.0.0.1:8080/stream.mp4")
         }
         
-        return URL(string: "http://127.0.0.1:8080/stream")
+        return URL(string: "http://127.0.0.1:8080/stream.mp4")
     }
     
     private func fetchP2PMediaData(infoHash: String) async -> Data? {
