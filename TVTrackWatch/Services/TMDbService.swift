@@ -241,4 +241,31 @@ public final class TMDbService: ObservableObject {
             )
         }
     }
+    
+    // MARK: - Person Profile Picture Search
+    private var personProfileCache: [String: URL] = [:]
+    
+    public func fetchPersonProfileURL(name: String) async -> URL? {
+        if let cached = personProfileCache[name] {
+            return cached
+        }
+        guard let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(AppConfig.tmdbBaseURL)/search/person?api_key=\(apiKey)&query=\(encoded)") else {
+            return nil
+        }
+        do {
+            let (data, _) = try await session.data(from: url)
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let results = json["results"] as? [[String: Any]],
+               let first = results.first,
+               let profilePath = first["profile_path"] as? String, !profilePath.isEmpty {
+                let profileURL = URL(string: "\(AppConfig.tmdbImageBaseURL)\(profilePath)")
+                personProfileCache[name] = profileURL
+                return profileURL
+            }
+        } catch {
+            print("Error fetching person profile for \(name): \(error)")
+        }
+        return nil
+    }
 }
