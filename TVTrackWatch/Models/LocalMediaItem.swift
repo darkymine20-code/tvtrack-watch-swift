@@ -21,8 +21,22 @@ public struct LocalMediaItem: Codable, Identifiable, Hashable {
     public var userRating: Double? // 10-star scale (1.0 - 10.0)
     public var lastWatchedDate: Date?
     public var addedToWatchlistDate: Date
+    public var playbackProgressSeconds: Double
+    
     // Playback progress per episode e.g. ["1_5": 1240.0]
     public var episodeProgressSeconds: [String: Double]
+    
+    // TV Show specifics: [Season_Episode: WatchedDateString] e.g. ["1_1": "2026-07-25"]
+    public var watchedEpisodes: [String: String]
+    
+    // Metadata for stats: Cast names & Director names
+    public var castNames: [String]
+    public var directorNames: [String]
+    
+    // Episode Counts & Status for TV Shows
+    public var totalEpisodes: Int?
+    public var releasedEpisodes: Int?
+    public var status: String? // "Ended", "Returning Series", "Canceled"
 
     public init(
         tmdbId: Int,
