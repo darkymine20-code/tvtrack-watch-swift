@@ -159,7 +159,7 @@ public final class DataManager: ObservableObject {
         saveToDisk()
     }
     
-    public func markSeasonAsWatched(
+    public func toggleSeasonWatched(
         tvId: Int,
         season: Int,
         episodes: [TMDbEpisode],
@@ -180,19 +180,51 @@ public final class DataManager: ObservableObject {
             releaseDate: releaseDate
         )
         
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let todayStr = dateFormatter.string(from: Date())
-        
-        for ep in episodes {
-            let epKey = "\(season)_\(ep.episodeNumber)"
-            current.watchedEpisodes[epKey] = todayStr
+        let allWatched = !episodes.isEmpty && episodes.allSatisfy { ep in
+            current.watchedEpisodes["\(season)_\(ep.episodeNumber)"] != nil
         }
         
-        current.lastWatchedDate = Date()
+        if allWatched {
+            for ep in episodes {
+                current.watchedEpisodes.removeValue(forKey: "\(season)_\(ep.episodeNumber)")
+            }
+        } else {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd"
+            let todayStr = dateFormatter.string(from: Date())
+            
+            for ep in episodes {
+                let epKey = "\(season)_\(ep.episodeNumber)"
+                current.watchedEpisodes[epKey] = todayStr
+            }
+            current.lastWatchedDate = Date()
+        }
+        
         evaluateShowWatchlistState(item: &current)
         items[key] = current
         saveToDisk()
+    }
+    
+    public func markSeasonAsWatched(
+        tvId: Int,
+        season: Int,
+        episodes: [TMDbEpisode],
+        showTitle: String? = nil,
+        posterPath: String? = nil,
+        backdropPath: String? = nil,
+        voteAverage: Double? = nil,
+        releaseDate: String? = nil
+    ) {
+        toggleSeasonWatched(
+            tvId: tvId,
+            season: season,
+            episodes: episodes,
+            showTitle: showTitle,
+            posterPath: posterPath,
+            backdropPath: backdropPath,
+            voteAverage: voteAverage,
+            releaseDate: releaseDate
+        )
     }
     
     public func updatePlaybackProgress(tmdbId: Int, mediaType: String, seconds: Double) {

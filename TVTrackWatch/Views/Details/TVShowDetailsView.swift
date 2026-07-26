@@ -282,8 +282,12 @@ public struct TVShowDetailsView: View {
                         Spacer()
                         
                         if let episodes = seasonDetails?.episodes, !episodes.isEmpty {
+                            let isSeasonWatched = episodes.allSatisfy { ep in
+                                localItem?.watchedEpisodes["\(selectedSeason)_\(ep.episodeNumber)"] != nil
+                            }
+                            
                             Button(action: {
-                                dataManager.markSeasonAsWatched(
+                                dataManager.toggleSeasonWatched(
                                     tvId: show.id,
                                     season: selectedSeason,
                                     episodes: episodes,
@@ -295,19 +299,19 @@ public struct TVShowDetailsView: View {
                                 )
                             }) {
                                 HStack(spacing: 6) {
-                                    Image(systemName: "checkmark.seal.fill")
-                                    Text("Mark Season Watched")
+                                    Image(systemName: isSeasonWatched ? "xmark.seal.fill" : "checkmark.seal.fill")
+                                    Text(isSeasonWatched ? "Unmark Season Watched" : "Mark Season Watched")
                                 }
                                 .font(.subheadline)
                                 .fontWeight(.bold)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .background(Color.green.opacity(0.25))
-                                .foregroundColor(.green)
+                                .background(isSeasonWatched ? Color.red.opacity(0.25) : Color.green.opacity(0.25))
+                                .foregroundColor(isSeasonWatched ? .red : .green)
                                 .cornerRadius(10)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color.green.opacity(0.4), lineWidth: 1)
+                                        .stroke(isSeasonWatched ? Color.red.opacity(0.4) : Color.green.opacity(0.4), lineWidth: 1)
                                 )
                             }
                         }
