@@ -3,17 +3,8 @@ import UniformTypeIdentifiers
 
 public struct ProfileView: View {
     @ObservedObject var dataManager = DataManager.shared
-    @State private var selectedFilter: ProfileFilter = .watchedMovies
-    
-    @State private var isImportOptionsPresented = false
-    @State private var isCSVImporterPresented = false
-    @State private var isPasteSheetPresented = false
-    @State private var pastedCSVText = ""
-    @State private var isImporting = false
-    @State private var importProgressMessage = ""
-    @State private var importCurrent = 0
-    @State private var importTotal = 0
-    @State private var importSummary: IMDbImportResult? = nil
+    @State private var selectedSortOption: ProfileSortOption = .dateWatchedNewest
+    @State private var displayLimit = 18
     
     public enum ProfileFilter: String, CaseIterable, Identifiable {
         case watchedMovies = "Watched Movies"
@@ -45,6 +36,27 @@ public struct ProfileView: View {
             }
         }
         public var title: String { rawValue }
+    }
+    
+    public enum ProfileSortOption: String, CaseIterable, Identifiable {
+        case dateWatchedNewest = "Date Watched (Newest)"
+        case dateWatchedOldest = "Date Watched (Oldest)"
+        case userRatingHighest = "My Rating (Highest)"
+        case userRatingLowest = "My Rating (Lowest)"
+        case tmdbRating = "TMDb Rating (Highest)"
+        case titleAZ = "Title (A-Z)"
+        case releaseDate = "Release Date (Newest)"
+        
+        public var id: String { rawValue }
+        public var icon: String {
+            switch self {
+            case .dateWatchedNewest, .dateWatchedOldest: return "calendar"
+            case .userRatingHighest, .userRatingLowest: return "star.fill"
+            case .tmdbRating: return "star.leadinghalf.filled"
+            case .titleAZ: return "textformat"
+            case .releaseDate: return "film"
+            }
+        }
     }
     
     public init() {}
@@ -88,6 +100,26 @@ public struct ProfileView: View {
         }
     }
     
+    private var sortedFilteredItems: [LocalMediaItem] {
+        let items = currentFilteredItems
+        switch selectedSortOption {
+        case .dateWatchedNewest:
+            return items.sorted { ($0.lastWatchedDate ?? $0.addedToWatchlistDate) > ($1.lastWatchedDate ?? $1.addedToWatchlistDate) }
+        case .dateWatchedOldest:
+            return items.sorted { ($0.lastWatchedDate ?? $0.addedToWatchlistDate) < ($1.lastWatchedDate ?? $1.addedToWatchlistDate) }
+        case .userRatingHighest:
+            return items.sorted { ($0.userRating ?? 0) > ($1.userRating ?? 0) }
+        case .userRatingLowest:
+            return items.sorted { ($0.userRating ?? 0) < ($1.userRating ?? 0) }
+        case .tmdbRating:
+            return items.sorted { ($0.voteAverage ?? 0) > ($1.voteAverage ?? 0) }
+        case .titleAZ:
+            return items.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        case .releaseDate:
+            return items.sorted { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
+        }
+    }
+    
     private var stats: (topActors: [PersonStat], topDirectors: [PersonStat]) {
         WatchlistCategorizer.calculateTopStats(items: allItems, minThreshold: 1)
     }
@@ -121,13 +153,43 @@ public struct ProfileView: View {
                     Image(systemName: selectedFilter.icon)
                         .foregroundColor(selectedFilter.color)
                         .font(.title2)
-                    Text("\(selectedFilter.rawValue) (\(currentFilteredItems.count))")
+                    Text("\(selectedFilter.rawValue) (\(sortedFilteredItems.count))")
                         .font(.title2).fontWeight(.black)
+                    
                     Spacer()
+                    
+                    Menu {
+                        ForEach(ProfileSortOption.allCases) { option in
+                            Button(action: {
+                                selectedSortOption = option
+                                displayLimit = 18
+                            }) {
+                                HStack {
+                                    Text(option.rawValue)
+                                    if selectedSortOption == option {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.up.arrow.down")
+                            Text("Sort: \(selectedSortOption.rawValue)")
+                        }
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Color.white.opacity(0.12))
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                    }
                 }
                 .padding(.horizontal)
                 
-                if currentFilteredItems.isEmpty {
+                if sortedFilteredItems.isEmpty {
                     GlassCardView {
                         VStack(spacing: 8) {
                             Image(systemName: "tray")
@@ -140,55 +202,80 @@ public struct ProfileView: View {
                     }
                     .padding(.horizontal)
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 20)], spacing: 20) {
-                        ForEach(currentFilteredItems) { item in
-                            NavigationLink(destination: detailsView(for: item)) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    ZStack(alignment: .topTrailing) {
-                                        if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
-                                            AsyncImage(url: url) { img in
-                                                img.resizable().aspectRatio(contentMode: .fill)
-                                            } placeholder: {
-                                                Rectangle().fill(Color.gray.opacity(0.3))
-                                            }
-                                            .frame(height: 220)
-                                            .cornerRadius(12)
-                                            .clipped()
-                                        } else {
-                                            Rectangle()
-                                                .fill(Color.gray.opacity(0.3))
+                    let visibleItems = Array(sortedFilteredItems.prefix(displayLimit))
+                    
+                    VStack(spacing: 16) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 20)], spacing: 20) {
+                            ForEach(visibleItems) { item in
+                                NavigationLink(destination: detailsView(for: item)) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ZStack(alignment: .topTrailing) {
+                                            if let path = item.posterPath, let url = URL(string: "\(AppConfig.tmdbImageBaseURL)\(path)") {
+                                                AsyncImage(url: url) { img in
+                                                    img.resizable().aspectRatio(contentMode: .fill)
+                                                } placeholder: {
+                                                    Rectangle().fill(Color.gray.opacity(0.3))
+                                                }
                                                 .frame(height: 220)
                                                 .cornerRadius(12)
+                                                .clipped()
+                                            } else {
+                                                Rectangle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .frame(height: 220)
+                                                    .cornerRadius(12)
+                                            }
+                                            
+                                            // User Rating Badge
+                                            if let rating = item.userRating, rating > 0 {
+                                                HStack(spacing: 2) {
+                                                    Image(systemName: "star.fill")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(.yellow)
+                                                    Text(String(format: "%.0f", rating))
+                                                        .font(.caption2)
+                                                        .fontWeight(.black)
+                                                        .foregroundColor(.white)
+                                                }
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(Color.black.opacity(0.85))
+                                                .cornerRadius(6)
+                                                .padding(6)
+                                            }
                                         }
                                         
-                                        // User Rating Badge
-                                        if let rating = item.userRating, rating > 0 {
-                                            HStack(spacing: 2) {
-                                                Image(systemName: "star.fill")
-                                                    .font(.system(size: 10))
-                                                    .foregroundColor(.yellow)
-                                                Text(String(format: "%.0f", rating))
-                                                    .font(.caption2)
-                                                    .fontWeight(.black)
-                                                    .foregroundColor(.white)
-                                            }
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 3)
-                                            .background(Color.black.opacity(0.85))
-                                            .cornerRadius(6)
-                                            .padding(6)
-                                        }
+                                        Text(item.title)
+                                            .font(.caption).fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                            .lineLimit(1)
                                     }
-                                    
-                                    Text(item.title)
-                                        .font(.caption).fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                        .lineLimit(1)
+                                }
+                                .onAppear {
+                                    if item.id == visibleItems.last?.id && displayLimit < sortedFilteredItems.count {
+                                        displayLimit += 18
+                                    }
                                 }
                             }
                         }
+                        .padding(.horizontal)
+                        
+                        if displayLimit < sortedFilteredItems.count {
+                            Button(action: { displayLimit += 18 }) {
+                                HStack {
+                                    Text("Showing \(visibleItems.count) of \(sortedFilteredItems.count) items — Tap or Scroll to load more")
+                                    Image(systemName: "chevron.down")
+                                }
+                                .font(.caption).fontWeight(.bold)
+                                .foregroundColor(.blue)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.blue.opacity(0.15))
+                                .cornerRadius(10)
+                            }
+                            .padding(.horizontal)
+                        }
                     }
-                    .padding(.horizontal)
                 }
             }
         }
@@ -247,21 +334,27 @@ public struct ProfileView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 12)], spacing: 12) {
                     CounterCardView(filter: .watchedMovies, count: watchedMovies.count, isSelected: selectedFilter == .watchedMovies) {
                         selectedFilter = .watchedMovies
+                        displayLimit = 18
                     }
                     CounterCardView(filter: .watchedTV, count: watchedTV.count, isSelected: selectedFilter == .watchedTV) {
                         selectedFilter = .watchedTV
+                        displayLimit = 18
                     }
                     CounterCardView(filter: .favoriteMovies, count: favoriteMovies.count, isSelected: selectedFilter == .favoriteMovies) {
                         selectedFilter = .favoriteMovies
+                        displayLimit = 18
                     }
                     CounterCardView(filter: .favoriteTV, count: favoriteTV.count, isSelected: selectedFilter == .favoriteTV) {
                         selectedFilter = .favoriteTV
+                        displayLimit = 18
                     }
                     CounterCardView(filter: .topCast, count: topCastCount, isSelected: selectedFilter == .topCast) {
                         selectedFilter = .topCast
+                        displayLimit = 18
                     }
                     CounterCardView(filter: .stoppedWatching, count: stoppedWatchingArchive.count, isSelected: selectedFilter == .stoppedWatching) {
                         selectedFilter = .stoppedWatching
+                        displayLimit = 18
                     }
                 }
                 .padding(.horizontal)
