@@ -96,14 +96,14 @@ public struct ProfileView: View {
     private func detailsView(for item: LocalMediaItem) -> some View {
         if item.mediaType == "tv" {
             TVShowDetailsView(show: TMDbMediaItem(
-                id: item.tmdbId, title: nil, name: item.title, overview: "",
+                id: item.tmdbId, title: nil, name: item.title, overview: nil,
                 posterPath: item.posterPath, backdropPath: item.backdropPath,
-                voteAverage: item.voteAverage, voteCount: nil, releaseDate: item.releaseDate,
-                firstAirDate: nil, mediaType: "tv", genreIds: nil
+                voteAverage: item.voteAverage, voteCount: nil, releaseDate: nil,
+                firstAirDate: item.releaseDate, mediaType: "tv", genreIds: nil
             ))
         } else {
             MovieDetailsView(movie: TMDbMediaItem(
-                id: item.tmdbId, title: item.title, name: nil, overview: "",
+                id: item.tmdbId, title: item.title, name: nil, overview: nil,
                 posterPath: item.posterPath, backdropPath: item.backdropPath,
                 voteAverage: item.voteAverage, voteCount: nil, releaseDate: item.releaseDate,
                 firstAirDate: nil, mediaType: "movie", genreIds: nil
