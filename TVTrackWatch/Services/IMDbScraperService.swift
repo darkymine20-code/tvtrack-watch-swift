@@ -421,18 +421,47 @@ public final class IMDbCSVImporter {
                             local.status = det.status
                             
                             let epDateStr = dateFormatter.string(from: local.lastWatchedDate ?? Date())
+                            let todayStr = dateFormatter.string(from: Date())
                             var releasedCount = 0
-                            if let seasons = det.seasons {
+                            
+                            if let lastEp = det.lastEpisodeToAir, let lastSeason = lastEp.seasonNumber, let lastEpNum = lastEp.episodeNumber {
+                                if let seasons = det.seasons {
+                                    for season in seasons where season.seasonNumber > 0 {
+                                        let sNum = season.seasonNumber
+                                        let epCount = season.episodeCount ?? 0
+                                        if sNum < lastSeason {
+                                            releasedCount += epCount
+                                            if epCount > 0 {
+                                                for ep in 1...epCount {
+                                                    local.watchedEpisodes["\(sNum)_\(ep)"] = epDateStr
+                                                }
+                                            }
+                                        } else if sNum == lastSeason {
+                                            releasedCount += lastEpNum
+                                            if lastEpNum > 0 {
+                                                for ep in 1...lastEpNum {
+                                                    local.watchedEpisodes["\(sNum)_\(ep)"] = epDateStr
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if let seasons = det.seasons {
                                 for season in seasons where season.seasonNumber > 0 {
+                                    let sNum = season.seasonNumber
                                     let epCount = season.episodeCount ?? 0
-                                    releasedCount += epCount
-                                    if epCount > 0 {
-                                        for ep in 1...epCount {
-                                            local.watchedEpisodes["\(season.seasonNumber)_\(ep)"] = epDateStr
+                                    let isAired = (season.airDate != nil && season.airDate! <= todayStr) || (season.airDate == nil && det.status == "Ended")
+                                    if isAired {
+                                        releasedCount += epCount
+                                        if epCount > 0 {
+                                            for ep in 1...epCount {
+                                                local.watchedEpisodes["\(sNum)_\(ep)"] = epDateStr
+                                            }
                                         }
                                     }
                                 }
                             }
+                            
                             if releasedCount == 0, let total = det.numberOfEpisodes, total > 0 {
                                 releasedCount = total
                                 for ep in 1...total {

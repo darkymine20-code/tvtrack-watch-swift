@@ -671,16 +671,23 @@ public struct TVShowDetailsView: View {
                     directorNames: Array(directorNames)
                 )
                 
-                // Calculate total released episodes count
-                let formatter = DateFormatter()
-                formatter.dateFormat = "yyyy-MM-dd"
-                let todayStr = formatter.string(from: Date())
+                // Calculate total released episodes count accurately using lastEpisodeToAir
                 var releasedCount = 0
-                if let seasons = det.seasons {
+                if let lastEp = det.lastEpisodeToAir, let lastSeason = lastEp.seasonNumber, let lastEpNum = lastEp.episodeNumber {
+                    if let seasons = det.seasons {
+                        for season in seasons where season.seasonNumber > 0 && season.seasonNumber < lastSeason {
+                            releasedCount += season.episodeCount ?? 0
+                        }
+                    }
+                    releasedCount += lastEpNum
+                } else if det.status == "Ended" {
+                    releasedCount = det.numberOfEpisodes ?? 0
+                } else if let seasons = det.seasons {
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd"
+                    let todayStr = formatter.string(from: Date())
                     for season in seasons where season.seasonNumber > 0 {
                         if let date = season.airDate, !date.isEmpty, date <= todayStr {
-                            releasedCount += season.episodeCount ?? 0
-                        } else if season.airDate == nil && det.status == "Ended" {
                             releasedCount += season.episodeCount ?? 0
                         }
                     }
