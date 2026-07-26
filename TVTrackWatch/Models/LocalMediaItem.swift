@@ -30,9 +30,10 @@ public struct LocalMediaItem: Codable, Identifiable, Hashable {
     public var castNames: [String]
     public var directorNames: [String]
     
-    // Episode Counts for TV Shows
+    // Episode Counts & Status for TV Shows
     public var totalEpisodes: Int?
     public var releasedEpisodes: Int?
+    public var status: String? // "Ended", "Returning Series", "Canceled"
 
     public init(
         tmdbId: Int,
@@ -54,7 +55,8 @@ public struct LocalMediaItem: Codable, Identifiable, Hashable {
         castNames: [String] = [],
         directorNames: [String] = [],
         totalEpisodes: Int? = nil,
-        releasedEpisodes: Int? = nil
+        releasedEpisodes: Int? = nil,
+        status: String? = nil
     ) {
         self.tmdbId = tmdbId
         self.mediaType = mediaType
@@ -76,5 +78,6 @@ public struct LocalMediaItem: Codable, Identifiable, Hashable {
         self.directorNames = directorNames
         self.totalEpisodes = totalEpisodes
         self.releasedEpisodes = releasedEpisodes
+        self.status = status
     }
 }

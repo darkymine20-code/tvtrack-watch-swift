@@ -60,17 +60,34 @@ public final class DataManager: ObservableObject {
         saveToDisk()
     }
     
-    public func updateEpisodeCounts(tmdbId: Int, totalEpisodes: Int?, releasedEpisodes: Int?) {
+    public func updateEpisodeCounts(tmdbId: Int, totalEpisodes: Int?, releasedEpisodes: Int?, status: String? = nil) {
         let key = "tv_\(tmdbId)"
         guard var current = items[key] else { return }
         current.totalEpisodes = totalEpisodes
         current.releasedEpisodes = releasedEpisodes
+        if let s = status, !s.isEmpty {
+            current.status = s
+        }
+        
+        let activeStatus = current.status ?? status ?? ""
+        let isEndedOrCanceled = activeStatus == "Ended" || activeStatus == "Canceled" || activeStatus == "Ended / Finished"
         
         if let released = releasedEpisodes, released > 0 {
-            if current.watchedEpisodes.count < released {
+            let watchedCount = current.watchedEpisodes.count
+            if watchedCount < released {
+                // Show has new released episodes -> Bring back to Watchlist automatically!
                 current.isWatched = false
+                current.isWatchlist = true
             } else {
+                // All released episodes have been watched
                 current.isWatched = true
+                if isEndedOrCanceled {
+                    // Show is no longer airing / finished -> Remove from Watchlist and keep in Watched TV Shows (Profile)
+                    current.isWatchlist = false
+                } else {
+                    // Show is still ongoing (Returning Series) -> Keep in Watchlist under "Waiting for New Episodes"
+                    current.isWatchlist = true
+                }
             }
         }
         
@@ -265,7 +282,7 @@ public final class DataManager: ObservableObject {
                         if releasedCount == 0, let total = det.numberOfEpisodes {
                             releasedCount = total
                         }
-                        updateEpisodeCounts(tmdbId: item.tmdbId, totalEpisodes: det.numberOfEpisodes, releasedEpisodes: releasedCount)
+                        updateEpisodeCounts(tmdbId: item.tmdbId, totalEpisodes: det.numberOfEpisodes, releasedEpisodes: releasedCount, status: det.status)
                     } else {
                         let det = try await TMDbService.shared.fetchMovieDetails(id: item.tmdbId)
                         let cast = det.credits?.cast.prefix(10).map { $0.name } ?? []

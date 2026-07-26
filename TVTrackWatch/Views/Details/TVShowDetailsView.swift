@@ -642,7 +642,7 @@ public struct TVShowDetailsView: View {
                 if releasedCount == 0, let total = det.numberOfEpisodes {
                     releasedCount = total
                 }
-                dataManager.updateEpisodeCounts(tmdbId: show.id, totalEpisodes: det.numberOfEpisodes, releasedEpisodes: releasedCount)
+                dataManager.updateEpisodeCounts(tmdbId: show.id, totalEpisodes: det.numberOfEpisodes, releasedEpisodes: releasedCount, status: det.status)
                 
                 loadSeasonEpisodes(seasonNumber: 1)
                 
