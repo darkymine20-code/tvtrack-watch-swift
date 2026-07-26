@@ -14,6 +14,8 @@ public struct TVShowDetailsView: View {
     @State private var imdbReviews: [IMDbReviewItem] = []
     @State private var traktComments: [TraktComment] = []
     @State private var selectedReviewTab = 0
+    @State private var visibleIMDbCount = 5
+    @State private var visibleTraktCount = 5
     @State private var selectedSeason = 1
     @State private var seasonDetails: TMDbSeasonDetails?
     @State private var isPlayerPresented = false
@@ -381,7 +383,8 @@ public struct TVShowDetailsView: View {
                             }
                             .padding(.horizontal)
                         } else {
-                            ForEach(imdbReviews) { review in
+                            let visibleReviews = Array(imdbReviews.prefix(visibleIMDbCount))
+                            ForEach(Array(visibleReviews.enumerated()), id: \.element.id) { index, review in
                                 GlassCardView {
                                     VStack(alignment: .leading, spacing: 8) {
                                         HStack {
@@ -400,9 +403,7 @@ public struct TVShowDetailsView: View {
                                             .font(.headline)
                                             .foregroundColor(.white)
                                         
-                                        Text(review.text)
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
+                                        CollapsibleCommentTextView(text: review.text)
                                         
                                         HStack(spacing: 12) {
                                             Text("👍 \(review.upVotes) helpful")
@@ -414,87 +415,137 @@ public struct TVShowDetailsView: View {
                                     .padding()
                                 }
                                 .padding(.horizontal)
+                                .onAppear {
+                                    if index == visibleReviews.count - 1 && visibleIMDbCount < imdbReviews.count {
+                                        visibleIMDbCount += 5
+                                    }
+                                }
+                            }
+                            
+                            if visibleIMDbCount < imdbReviews.count {
+                                Button(action: { visibleIMDbCount += 5 }) {
+                                    HStack {
+                                        Text("Show More Reviews (\(imdbReviews.count - visibleIMDbCount) remaining)")
+                                        Image(systemName: "chevron.down")
+                                    }
+                                    .font(.caption).fontWeight(.bold)
+                                    .foregroundColor(.yellow)
+                                    .padding(.vertical, 10)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.yellow.opacity(0.15))
+                                    .cornerRadius(10)
+                                }
+                                .padding(.horizontal)
                             }
                         }
                     } else {
                         // Trakt Tab
-                        ForEach(traktComments) { comment in
+                        if traktComments.isEmpty {
                             GlassCardView {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    HStack(spacing: 12) {
-                                        // User Profile Picture Avatar
-                                        if let avatarURL = comment.user.avatarURL {
-                                            AsyncImage(url: avatarURL) { img in
-                                                img.resizable().aspectRatio(contentMode: .fill)
-                                            } placeholder: {
-                                                Circle().fill(Color.red.opacity(0.4))
-                                                    .overlay(Text(String(comment.user.username.prefix(1)).uppercased()).font(.caption).fontWeight(.black).foregroundColor(.white))
-                                            }
-                                            .frame(width: 38, height: 38)
-                                            .clipShape(Circle())
-                                            .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
-                                        } else {
-                                            Circle()
-                                                .fill(Color.red.opacity(0.4))
-                                                .frame(width: 38, height: 38)
-                                                .overlay(Text(String(comment.user.username.prefix(1)).uppercased()).font(.caption).fontWeight(.black).foregroundColor(.white))
-                                        }
-                                        
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            HStack(spacing: 6) {
-                                                Text(comment.user.name ?? comment.user.username)
-                                                    .font(.subheadline).fontWeight(.bold)
-                                                    .foregroundColor(.white)
-                                                
-                                                if comment.user.vip == true {
-                                                    Text("VIP")
-                                                        .font(.caption2).fontWeight(.black)
-                                                        .padding(.horizontal, 5).padding(.vertical, 2)
-                                                        .background(Color.purple)
-                                                        .foregroundColor(.white)
-                                                        .cornerRadius(4)
-                                                }
-                                            }
-                                            
-                                            Text("@\(comment.user.username)")
-                                                .font(.caption2)
-                                                .foregroundColor(.gray)
-                                        }
-                                        
-                                        Spacer()
-                                        
-                                        Text(comment.reactionEmoji)
-                                            .font(.title2)
-                                        
-                                        Text(comment.formattedDate)
-                                            .font(.caption2).foregroundColor(.gray)
-                                    }
-                                    
-                                    Text(comment.comment)
-                                        .font(.subheadline)
-                                        .foregroundColor(.white)
-                                    
-                                    HStack(spacing: 14) {
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "hand.thumbsup.fill")
-                                                .font(.caption2)
-                                            Text("\(comment.likes)")
-                                                .font(.caption2).fontWeight(.bold)
-                                        }
-                                        .foregroundColor(.green)
-                                        
-                                        HStack(spacing: 4) {
-                                            Image(systemName: "arrow.turn.down.right")
-                                                .font(.caption2)
-                                            Text("\(comment.replies ?? 0) Replies")
-                                                .font(.caption2).fontWeight(.bold)
-                                        }
-                                        .foregroundColor(.cyan)
-                                    }
-                                }
-                                .padding()
+                                Text("No Trakt reactions available.")
+                                    .foregroundColor(.gray)
+                                    .padding()
                             }
                             .padding(.horizontal)
+                        } else {
+                            let visibleComments = Array(traktComments.prefix(visibleTraktCount))
+                            ForEach(Array(visibleComments.enumerated()), id: \.element.id) { index, comment in
+                                GlassCardView {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        HStack(spacing: 12) {
+                                            // User Profile Picture Avatar
+                                            if let avatarURL = comment.user.avatarURL {
+                                                AsyncImage(url: avatarURL) { img in
+                                                    img.resizable().aspectRatio(contentMode: .fill)
+                                                } placeholder: {
+                                                    Circle().fill(Color.red.opacity(0.4))
+                                                        .overlay(Text(String(comment.user.username.prefix(1)).uppercased()).font(.caption).fontWeight(.black).foregroundColor(.white))
+                                                }
+                                                .frame(width: 38, height: 38)
+                                                .clipShape(Circle())
+                                                .overlay(Circle().stroke(Color.white.opacity(0.2), lineWidth: 1))
+                                            } else {
+                                                Circle()
+                                                    .fill(Color.red.opacity(0.4))
+                                                    .frame(width: 38, height: 38)
+                                                    .overlay(Text(String(comment.user.username.prefix(1)).uppercased()).font(.caption).fontWeight(.black).foregroundColor(.white))
+                                            }
+                                            
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                HStack(spacing: 6) {
+                                                    Text(comment.user.name ?? comment.user.username)
+                                                        .font(.subheadline).fontWeight(.bold)
+                                                        .foregroundColor(.white)
+                                                    
+                                                    if comment.user.vip == true {
+                                                        Text("VIP")
+                                                            .font(.caption2).fontWeight(.black)
+                                                            .padding(.horizontal, 5).padding(.vertical, 2)
+                                                            .background(Color.purple)
+                                                            .foregroundColor(.white)
+                                                            .cornerRadius(4)
+                                                    }
+                                                }
+                                                
+                                                Text("@\(comment.user.username)")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.gray)
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            Text(comment.reactionEmoji)
+                                                .font(.title2)
+                                            
+                                            Text(comment.formattedDate)
+                                                .font(.caption2).foregroundColor(.gray)
+                                        }
+                                        
+                                        CollapsibleCommentTextView(text: comment.comment)
+                                        
+                                        HStack(spacing: 14) {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "hand.thumbsup.fill")
+                                                    .font(.caption2)
+                                                Text("\(comment.likes)")
+                                                    .font(.caption2).fontWeight(.bold)
+                                            }
+                                            .foregroundColor(.green)
+                                            
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "arrow.turn.down.right")
+                                                    .font(.caption2)
+                                                Text("\(comment.replies ?? 0) Replies")
+                                                    .font(.caption2).fontWeight(.bold)
+                                            }
+                                            .foregroundColor(.cyan)
+                                        }
+                                    }
+                                    .padding()
+                                }
+                                .padding(.horizontal)
+                                .onAppear {
+                                    if index == visibleComments.count - 1 && visibleTraktCount < traktComments.count {
+                                        visibleTraktCount += 5
+                                    }
+                                }
+                            }
+                            
+                            if visibleTraktCount < traktComments.count {
+                                Button(action: { visibleTraktCount += 5 }) {
+                                    HStack {
+                                        Text("Show More Reactions (\(traktComments.count - visibleTraktCount) remaining)")
+                                        Image(systemName: "chevron.down")
+                                    }
+                                    .font(.caption).fontWeight(.bold)
+                                    .foregroundColor(.cyan)
+                                    .padding(.vertical, 10)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.cyan.opacity(0.15))
+                                    .cornerRadius(10)
+                                }
+                                .padding(.horizontal)
+                            }
                         }
                     }
                 }
