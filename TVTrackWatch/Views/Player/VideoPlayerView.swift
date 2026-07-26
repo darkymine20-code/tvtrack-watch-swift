@@ -286,6 +286,9 @@ public struct VideoPlayerView: View {
                         .background(Color.black)
                     } else if let player = avPlayer {
                         renderPlayerContainer(player: player)
+                    } else if let directURL = directVideoURL {
+                        WebViewWrapper(url: directURL)
+                            .ignoresSafeArea()
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "exclamationmark.triangle.fill")
@@ -520,34 +523,44 @@ public struct VideoPlayerView: View {
     
     private func startPlayingDirectURL(targetURL: URL, cleanTitle: String, year: Int) {
         self.directVideoURL = targetURL
-        let newPlayer = AVPlayer(url: targetURL)
-        self.avPlayer = newPlayer
         
-        let savedProgress = DataManager.shared.getPlaybackProgress(
-            tmdbId: tmdbId,
-            mediaType: isTV ? "tv" : "movie",
-            season: seasonNumber,
-            episode: episodeNumber
-        )
+        let pathExt = targetURL.pathExtension.lowercased()
+        let isAVPlayerCompatible = ["mp4", "m4v", "mov", "m3u8"].contains(pathExt)
         
-        if savedProgress > 5.0 {
-            let cmTime = CMTime(seconds: savedProgress, preferredTimescale: 600)
-            newPlayer.seek(to: cmTime)
-            let formatted = formatSeconds(savedProgress)
-            self.resumeToastMessage = "Resumed from \(formatted)"
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-                withAnimation {
-                    if self.resumeToastMessage != nil {
-                        self.resumeToastMessage = nil
+        if isAVPlayerCompatible {
+            let newPlayer = AVPlayer(url: targetURL)
+            self.avPlayer = newPlayer
+            
+            let savedProgress = DataManager.shared.getPlaybackProgress(
+                tmdbId: tmdbId,
+                mediaType: isTV ? "tv" : "movie",
+                season: seasonNumber,
+                episode: episodeNumber
+            )
+            
+            if savedProgress > 5.0 {
+                let cmTime = CMTime(seconds: savedProgress, preferredTimescale: 600)
+                newPlayer.seek(to: cmTime)
+                let formatted = formatSeconds(savedProgress)
+                self.resumeToastMessage = "Resumed from \(formatted)"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                    withAnimation {
+                        if self.resumeToastMessage != nil {
+                            self.resumeToastMessage = nil
+                        }
                     }
                 }
             }
+            
+            self.setupTimeObserver(player: newPlayer)
+            newPlayer.play()
+        } else {
+            // For .mkv, .avi, .webm, WebKit engine decodes and plays it seamlessly
+            self.avPlayer = nil
         }
         
-        self.setupTimeObserver(player: newPlayer)
         self.isResolvingFlussonic = false
         self.isResolvingSeedr = false
-        newPlayer.play()
         
         resolveFlussonicSubtitles(targetURL: targetURL, cleanTitle: cleanTitle, year: year)
     }

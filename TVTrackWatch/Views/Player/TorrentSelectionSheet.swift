@@ -96,6 +96,18 @@ public struct TorrentSelectionSheet: View {
                                                     .foregroundColor(isAllowed ? .purple : .gray)
                                                     .cornerRadius(6)
                                                 
+                                                let tLower = candidate.titleName.lowercased()
+                                                let fmtTag: String = tLower.contains("mp4") ? "MP4" : (tLower.contains("mkv") ? "MKV" : (tLower.contains("avi") ? "AVI" : ""))
+                                                if !fmtTag.isEmpty {
+                                                    Text(fmtTag)
+                                                        .font(.caption.bold())
+                                                        .padding(.horizontal, 6)
+                                                        .padding(.vertical, 3)
+                                                        .background(Color.blue.opacity(0.2))
+                                                        .foregroundColor(.blue)
+                                                        .cornerRadius(6)
+                                                }
+                                                
                                                 if candidate.sizeBytes > 0 {
                                                     Text(formatSizeBytes(candidate.sizeBytes))
                                                         .font(.caption.bold())
