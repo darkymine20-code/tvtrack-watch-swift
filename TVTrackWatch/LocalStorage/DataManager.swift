@@ -176,9 +176,7 @@ public final class DataManager: ObservableObject {
             posterPath: posterPath,
             backdropPath: backdropPath,
             voteAverage: voteAverage,
-            releaseDate: releaseDate,
-            castNames: castNames ?? [],
-            directorNames: directorNames ?? []
+            releaseDate: releaseDate
         )
         
         if let title = title, !title.isEmpty, title != "Movie" && title != "TV Show" && title != "Title" {
