@@ -13,6 +13,11 @@ public struct AppConfig {
     
     public static let streamingServers: [StreamingServer] = [
         StreamingServer(
+            name: "Flussonic Direct Server",
+            movieURLTemplate: "flussonic_direct",
+            tvURLTemplate: "flussonic_direct"
+        ),
+        StreamingServer(
             name: "Vidking Primary",
             movieURLTemplate: "https://www.vidking.net/embed/movie/{tmdb_id}",
             tvURLTemplate: "https://www.vidking.net/embed/tv/{tmdb_id}/{season_number}/{episode_number}"

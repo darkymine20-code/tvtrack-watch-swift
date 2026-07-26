@@ -596,9 +596,12 @@ public struct TVShowDetailsView: View {
         }
         .fullScreenCover(isPresented: $isPlayerPresented) {
             if let ep = activeEpisode {
+                let yearStr = show.firstAirDate ?? show.releaseDate ?? ""
+                let yearVal = Int(yearStr.prefix(4)) ?? Calendar.current.component(.year, from: Date())
                 VideoPlayerView(
                     title: "\(show.displayTitle) S\(ep.season)E\(ep.episode)",
                     tmdbId: show.id,
+                    releaseYear: yearVal,
                     isTV: true,
                     seasonNumber: ep.season,
                     episodeNumber: ep.episode

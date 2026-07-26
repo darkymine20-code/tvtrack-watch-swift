@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import AVKit
 
 #if canImport(UIKit)
 import UIKit
@@ -55,18 +56,28 @@ public struct VideoPlayerView: View {
     @ObservedObject var streamingEngine = StreamingEngine.shared
     public let title: String
     public let tmdbId: Int
+    public let releaseYear: Int?
     public let isTV: Bool
     public let seasonNumber: Int?
     public let episodeNumber: Int?
     
+    @State private var directVideoURL: URL? = nil
+    @State private var isResolvingFlussonic = false
+    @State private var avPlayer: AVPlayer? = nil
+    
     @Environment(\.dismiss) var dismiss
     
-    public init(title: String, tmdbId: Int, isTV: Bool = false, seasonNumber: Int? = nil, episodeNumber: Int? = nil) {
+    public init(title: String, tmdbId: Int, releaseYear: Int? = nil, isTV: Bool = false, seasonNumber: Int? = nil, episodeNumber: Int? = nil) {
         self.title = title
         self.tmdbId = tmdbId
+        self.releaseYear = releaseYear
         self.isTV = isTV
         self.seasonNumber = seasonNumber
         self.episodeNumber = episodeNumber
+    }
+    
+    public var isFlussonicSelected: Bool {
+        streamingEngine.selectedServer.name.contains("Flussonic") || streamingEngine.selectedServer.movieURLTemplate == "flussonic_direct"
     }
     
     public var currentStreamURL: URL? {
@@ -99,6 +110,13 @@ public struct VideoPlayerView: View {
                     ForEach(streamingEngine.availableServers) { server in
                         Button(action: {
                             streamingEngine.selectServer(server)
+                            if server.name.contains("Flussonic") || server.movieURLTemplate == "flussonic_direct" {
+                                resolveFlussonicURL()
+                            } else {
+                                avPlayer?.pause()
+                                avPlayer = nil
+                                directVideoURL = nil
+                            }
                         }) {
                             HStack {
                                 Text(server.name)
@@ -122,7 +140,10 @@ public struct VideoPlayerView: View {
                     .cornerRadius(8)
                 }
                 
-                Button(action: { dismiss() }) {
+                Button(action: {
+                    avPlayer?.pause()
+                    dismiss()
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.title2)
                         .foregroundColor(.gray)
@@ -132,23 +153,111 @@ public struct VideoPlayerView: View {
             .padding()
             .background(Color.black)
             
-            // Streaming WebView Player
-            if let url = currentStreamURL {
-                WebViewWrapper(url: url)
-                    .ignoresSafeArea()
-            } else {
-                VStack {
-                    Spacer()
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.largeTitle)
-                        .foregroundColor(.yellow)
-                    Text("Failed to generate streaming server URL.")
-                        .foregroundColor(.gray)
-                    Spacer()
+            // Player Content View
+            ZStack {
+                if isFlussonicSelected {
+                    if isResolvingFlussonic {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .blue))
+                                .scaleEffect(1.4)
+                            Text("Probing Flussonic high-speed servers...")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text("Testing primary and backup mirrors for 200 OK...")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black)
+                    } else if let player = avPlayer {
+                        VideoPlayer(player: player)
+                            .ignoresSafeArea()
+                            .onDisappear {
+                                player.pause()
+                            }
+                    } else {
+                        VStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 44))
+                                .foregroundColor(.yellow)
+                            Text("Flussonic direct link unavailable.")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text("Switching to embed servers...")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black)
+                    }
+                } else if let url = currentStreamURL {
+                    WebViewWrapper(url: url)
+                        .ignoresSafeArea()
+                } else {
+                    VStack {
+                        Spacer()
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundColor(.yellow)
+                        Text("Failed to generate streaming server URL.")
+                            .foregroundColor(.gray)
+                        Spacer()
+                    }
+                    .background(Color.black)
                 }
-                .background(Color.black)
             }
         }
         .background(Color.black)
+        .onAppear {
+            if isFlussonicSelected {
+                resolveFlussonicURL()
+            }
+        }
+    }
+    
+    private func resolveFlussonicURL() {
+        isResolvingFlussonic = true
+        avPlayer?.pause()
+        avPlayer = nil
+        
+        let cleanTitle: String
+        if isTV {
+            // Strip out S01E01 suffix if passed in title
+            if let index = title.range(of: " S")?.lowerBound {
+                cleanTitle = String(title[..<index])
+            } else {
+                cleanTitle = title
+            }
+        } else {
+            cleanTitle = title
+        }
+        
+        let year = releaseYear ?? Calendar.current.component(.year, from: Date())
+        
+        Task {
+            let targetURL: URL
+            if isTV, let s = seasonNumber, let e = episodeNumber {
+                targetURL = await FlussonicResolver.shared.resolveTVDirectURL(
+                    title: cleanTitle,
+                    year: year,
+                    season: s,
+                    episode: e
+                )
+            } else {
+                targetURL = await FlussonicResolver.shared.resolveMovieDirectURL(
+                    title: cleanTitle,
+                    year: year
+                )
+            }
+            
+            await MainActor.run {
+                self.directVideoURL = targetURL
+                let newPlayer = AVPlayer(url: targetURL)
+                self.avPlayer = newPlayer
+                self.isResolvingFlussonic = false
+                newPlayer.play()
+            }
+        }
     }
 }

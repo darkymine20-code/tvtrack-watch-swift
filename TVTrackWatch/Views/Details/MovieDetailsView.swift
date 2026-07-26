@@ -451,7 +451,14 @@ public struct MovieDetailsView: View {
             }
         }
         .fullScreenCover(isPresented: $isPlayerPresented) {
-            VideoPlayerView(title: movie.displayTitle, tmdbId: movie.id, isTV: false)
+            let yearStr = movie.releaseDate?.prefix(4) ?? ""
+            let yearVal = Int(yearStr) ?? Calendar.current.component(.year, from: Date())
+            VideoPlayerView(
+                title: movie.displayTitle,
+                tmdbId: movie.id,
+                releaseYear: yearVal,
+                isTV: false
+            )
         }
         .sheet(item: $selectedPerson) { member in
             PersonDetailView(personName: member.name, personId: member.id)
