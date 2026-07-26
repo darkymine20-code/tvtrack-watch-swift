@@ -1,8 +1,9 @@
 import Foundation
 import SwiftTorrent
+import Network
 
-/// Real P2P BitTorrent streaming engine powered by SwiftTorrent (pure Swift libtorrent).
-/// Downloads torrent pieces sequentially and serves them over a localhost HTTP server
+/// Real P2P BitTorrent streaming engine powered by SwiftTorrent (pure Swift).
+/// Downloads torrent pieces and serves them over a localhost HTTP server
 /// for AVPlayer consumption.
 @MainActor
 public class LibtorrentStreamEngine: ObservableObject {
@@ -35,9 +36,8 @@ public class LibtorrentStreamEngine: ObservableObject {
         onStatus("Initializing BitTorrent session...")
         
         do {
-            // Create session with settings optimized for streaming
-            let settings = SessionSettings()
-            let newSession = Session(settings: settings)
+            // Create session
+            let newSession = Session(settings: SessionSettings())
             self.session = newSession
             
             onStatus("Starting DHT peer discovery...")
@@ -46,7 +46,7 @@ public class LibtorrentStreamEngine: ObservableObject {
             onStatus("Parsing magnet link...")
             let params = try AddTorrentParams.fromMagnet(magnetURL, savePath: getTorrentSavePath())
             
-            onStatus("Adding torrent to session...")
+            onStatus("Adding torrent to swarm...")
             let handle = try await newSession.addTorrent(params)
             self.currentHandle = handle
             
@@ -57,7 +57,7 @@ public class LibtorrentStreamEngine: ObservableObject {
             
             // Wait for metadata (file list) to be resolved from peers
             onStatus("Resolving torrent metadata from peers...")
-            let resolvedInfo = try await waitForMetadata(handle: handle, onStatus: onStatus)
+            let resolvedInfo = try await handle.waitForMetadata(timeout: 120)
             
             // Find the largest video file
             guard let videoFile = findLargestVideoFile(info: resolvedInfo) else {
@@ -65,7 +65,8 @@ public class LibtorrentStreamEngine: ObservableObject {
                 return nil
             }
             
-            onStatus("Found video: \(videoFile.name) (\(ByteCountFormatter.string(fromByteCount: Int64(videoFile.size), countStyle: .file)))")
+            let sizeStr = ByteCountFormatter.string(fromByteCount: videoFile.length, countStyle: .file)
+            onStatus("Found video: \(videoFile.path) (\(sizeStr))")
             
             // Start the local HTTP server to serve downloaded pieces
             let server = TorrentHTTPServer(port: serverPort, savePath: getTorrentSavePath(), videoFile: videoFile)
@@ -75,7 +76,7 @@ public class LibtorrentStreamEngine: ObservableObject {
             // Start monitoring download progress
             startProgressMonitor(handle: handle, onStatus: onStatus)
             
-            // Wait until enough data is buffered (first 5% or 10MB, whichever is smaller)
+            // Wait until enough data is buffered (first 5% or 10MB)
             onStatus("Buffering initial data for smooth playback...")
             try await waitForBuffer(handle: handle, threshold: 0.05, onStatus: onStatus)
             
@@ -122,26 +123,6 @@ public class LibtorrentStreamEngine: ObservableObject {
         return torrentDir
     }
     
-    private func waitForMetadata(handle: TorrentHandle, onStatus: @escaping (String) -> Void) async throws -> TorrentInfo {
-        // Poll until metadata is resolved
-        for i in 0..<120 { // 2 minute timeout
-            let status = await handle.status()
-            
-            if status.state != .downloadingMetadata {
-                // Metadata resolved — we can access torrent info
-                if let info = await handle.torrentInfo {
-                    return info
-                }
-            }
-            
-            let peerCount = status.numPeers
-            onStatus("Resolving metadata... (\(peerCount) peers, attempt \(i+1)/120)")
-            
-            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
-        }
-        throw TorrentStreamError.metadataTimeout
-    }
-    
     private func waitForBuffer(handle: TorrentHandle, threshold: Double, onStatus: @escaping (String) -> Void) async throws {
         for _ in 0..<300 { // 5 minute timeout
             let status = await handle.status()
@@ -164,19 +145,16 @@ public class LibtorrentStreamEngine: ObservableObject {
         // If we timed out but have some data, allow playback anyway
     }
     
-    private func findLargestVideoFile(info: TorrentInfo) -> TorrentVideoFile? {
+    private func findLargestVideoFile(info: TorrentInfo) -> TorrentInfo.FileEntry? {
         let videoExtensions = ["mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "ts"]
         
-        var largestFile: TorrentVideoFile? = nil
+        var largestFile: TorrentInfo.FileEntry? = nil
         
-        for i in 0..<info.numFiles {
-            let fileName = info.fileName(at: i)
-            let fileSize = info.fileSize(at: i)
-            let ext = (fileName as NSString).pathExtension.lowercased()
-            
+        for file in info.files {
+            let ext = (file.path as NSString).pathExtension.lowercased()
             if videoExtensions.contains(ext) {
-                if largestFile == nil || fileSize > largestFile!.size {
-                    largestFile = TorrentVideoFile(index: i, name: fileName, size: fileSize)
+                if largestFile == nil || file.length > (largestFile?.length ?? 0) {
+                    largestFile = file
                 }
             }
         }
@@ -199,76 +177,22 @@ public class LibtorrentStreamEngine: ObservableObject {
                     self.statusText = "\(pct)% — \(speed)/s — \(status.numPeers) peers"
                 }
                 
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
             }
         }
-    }
-}
-
-// MARK: - Supporting Types
-
-struct TorrentVideoFile {
-    let index: Int
-    let name: String
-    let size: Int
-}
-
-enum TorrentStreamError: LocalizedError {
-    case metadataTimeout
-    case noVideoFile
-    case serverStartFailed
-    
-    var errorDescription: String? {
-        switch self {
-        case .metadataTimeout: return "Timed out resolving torrent metadata from peers"
-        case .noVideoFile: return "No video file found in torrent"
-        case .serverStartFailed: return "Failed to start local HTTP streaming server"
-        }
-    }
-}
-
-// MARK: - Extension to get TorrentInfo from TorrentHandle
-
-extension TorrentHandle {
-    /// Access resolved torrent info (available after metadata download)
-    var torrentInfo: TorrentInfo? {
-        get async {
-            // Access the internal info if metadata has been resolved
-            let status = await self.status()
-            if status.state != .downloadingMetadata {
-                return nil // Placeholder - actual implementation depends on SwiftTorrent API
-            }
-            return nil
-        }
-    }
-}
-
-// MARK: - Extension to get file info from TorrentInfo
-
-extension TorrentInfo {
-    var numFiles: Int { files.count }
-    
-    func fileName(at index: Int) -> String {
-        return files[index].path
-    }
-    
-    func fileSize(at index: Int) -> Int {
-        return files[index].length
     }
 }
 
 // MARK: - Local HTTP Server for AVPlayer
 
-import Network
-
 /// Lightweight HTTP server that serves downloaded torrent video data to AVPlayer.
 class TorrentHTTPServer {
     private let port: UInt16
     private let savePath: String
-    private let videoFile: TorrentVideoFile
+    private let videoFile: TorrentInfo.FileEntry
     private var listener: NWListener?
     
-    init(port: UInt16, savePath: String, videoFile: TorrentVideoFile) {
+    init(port: UInt16, savePath: String, videoFile: TorrentInfo.FileEntry) {
         self.port = port
         self.savePath = savePath
         self.videoFile = videoFile
@@ -304,7 +228,7 @@ class TorrentHTTPServer {
     }
     
     private func serveVideoFile(connection: NWConnection, request: String) {
-        let filePath = (savePath as NSString).appendingPathComponent(videoFile.name)
+        let filePath = (savePath as NSString).appendingPathComponent(videoFile.path)
         
         guard FileManager.default.fileExists(atPath: filePath),
               let fileHandle = FileHandle(forReadingAtPath: filePath) else {
@@ -317,7 +241,7 @@ class TorrentHTTPServer {
         
         defer { fileHandle.closeFile() }
         
-        let fileSize = (try? FileManager.default.attributesOfItem(atPath: filePath)[.size] as? Int64) ?? 0
+        let fileSize = videoFile.length
         
         // Parse Range header
         var rangeStart: Int64 = 0
@@ -337,7 +261,7 @@ class TorrentHTTPServer {
         }
         
         let contentLength = rangeEnd - rangeStart + 1
-        let mimeType = videoFile.name.hasSuffix(".mkv") ? "video/x-matroska" : "video/mp4"
+        let mimeType = videoFile.path.hasSuffix(".mkv") ? "video/x-matroska" : "video/mp4"
         
         let headers: String
         if rangeStart == 0 && rangeEnd == fileSize - 1 {
@@ -346,13 +270,12 @@ class TorrentHTTPServer {
             headers = "HTTP/1.1 206 Partial Content\r\nContent-Type: \(mimeType)\r\nContent-Range: bytes \(rangeStart)-\(rangeEnd)/\(fileSize)\r\nContent-Length: \(contentLength)\r\nAccept-Ranges: bytes\r\n\r\n"
         }
         
-        // Send headers
+        // Send headers then file data in chunks
         connection.send(content: headers.data(using: .utf8), completion: .contentProcessed { [weak self] error in
             guard error == nil else {
                 connection.cancel()
                 return
             }
-            // Send file data in chunks
             self?.sendFileChunks(connection: connection, fileHandle: fileHandle, offset: rangeStart, remaining: contentLength)
         })
     }
