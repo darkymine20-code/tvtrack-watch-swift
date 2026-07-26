@@ -164,13 +164,14 @@ public final class SeedrTorrentResolver {
     public func checkExistingStream(token: String, title: String) async -> URL? {
         guard let rootFolder = await fetchRootFolder(token: token) else { return nil }
         
-        let cleanTargetTitle = title.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted).joined()
+        let targetWords = title.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted).filter { $0.count > 2 }
         
         // Check existing folders
         if let folders = rootFolder.folders {
             for folder in folders {
-                let cleanFolderName = folder.name.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted).joined()
-                if cleanFolderName.contains(cleanTargetTitle) || cleanTargetTitle.contains(cleanFolderName) {
+                let cleanFolder = folder.name.lowercased()
+                let isMatch = targetWords.isEmpty || targetWords.contains(where: { cleanFolder.contains($0) })
+                if isMatch {
                     if let fileURL = await fetchFirstVideoURLInFolder(token: token, folderId: folder.id) {
                         return fileURL
                     }
@@ -181,11 +182,19 @@ public final class SeedrTorrentResolver {
         // Check existing root files
         if let files = rootFolder.files {
             for file in files {
-                let cleanFileName = file.name.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted).joined()
-                if cleanFileName.contains(cleanTargetTitle) {
-                    if let urlStr = file.url, let url = URL(string: urlStr) {
-                        return url
-                    }
+                let fileId = file.id
+                let resourceURL = URL(string: "https://www.seedr.cc/oauth_test/resource.php")!
+                var req = URLRequest(url: resourceURL)
+                req.httpMethod = "POST"
+                let body = "access_token=\(token)&func=fetch_file&folder_file_id=\(fileId)"
+                req.httpBody = body.data(using: .utf8)
+                req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+                
+                if let (fData, _) = try? await URLSession.shared.data(for: req),
+                   let fJson = try? JSONSerialization.jsonObject(with: fData) as? [String: Any],
+                   let directUrlStr = fJson["url"] as? String,
+                   let directUrl = URL(string: directUrlStr) {
+                    return directUrl
                 }
             }
         }
@@ -342,34 +351,39 @@ public final class SeedrTorrentResolver {
             
             let videoExtensions = [".mp4", ".mkv", ".avi", ".mov", ".m4v"]
             
-            var bestFileURL: URL? = nil
+            var bestFileId: Int? = nil
             var maxFileSize: Int64 = 0
             
             for file in files {
                 guard let name = file["name"] as? String else { continue }
                 let ext = (name as NSString).pathExtension.lowercased()
-                if videoExtensions.contains(".\(ext)") || ext.isEmpty {
+                let isVideo = (file["is_video"] as? Bool) ?? false
+                
+                if isVideo || videoExtensions.contains(".\(ext)") {
                     let size = (file["size"] as? Int64) ?? 0
                     if size >= maxFileSize {
                         maxFileSize = size
-                        
-                        if let fileId = file["id"] as? Int {
-                            let fileUrlReq = URL(string: "https://www.seedr.cc/api/file/\(fileId)/url?access_token=\(token)")
-                            if let fReq = fileUrlReq,
-                               let (fData, _) = try? await URLSession.shared.data(from: fReq),
-                               let fJson = try? JSONSerialization.jsonObject(with: fData) as? [String: Any],
-                               let directUrlStr = fJson["url"] as? String ?? fJson["stream_link"] as? String,
-                               let directUrl = URL(string: directUrlStr) {
-                                bestFileURL = directUrl
-                            } else if let streamLink = file["stream_link"] as? String ?? file["url"] as? String,
-                                      let directUrl = URL(string: streamLink) {
-                                bestFileURL = directUrl
-                            }
-                        }
+                        bestFileId = file["folder_file_id"] as? Int ?? file["id"] as? Int
                     }
                 }
             }
-            return bestFileURL
+            
+            if let fileId = bestFileId {
+                let resourceURL = URL(string: "https://www.seedr.cc/oauth_test/resource.php")!
+                var req = URLRequest(url: resourceURL)
+                req.httpMethod = "POST"
+                let body = "access_token=\(token)&func=fetch_file&folder_file_id=\(fileId)"
+                req.httpBody = body.data(using: .utf8)
+                req.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+                
+                let (fData, _) = try await URLSession.shared.data(for: req)
+                if let fJson = try JSONSerialization.jsonObject(with: fData) as? [String: Any],
+                   let directUrlStr = fJson["url"] as? String,
+                   let directUrl = URL(string: directUrlStr) {
+                    return directUrl
+                }
+            }
+            return nil
         } catch {
             return nil
         }
