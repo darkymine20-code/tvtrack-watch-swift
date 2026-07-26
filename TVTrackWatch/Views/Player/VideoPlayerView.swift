@@ -383,9 +383,24 @@ public struct VideoPlayerView: View {
                         .background(Color.black)
                     }
                 } else if isITorrentSelected {
-                    if let magnet = activeITorrentMagnetURL {
-                        ITorrentStreamView(magnetURL: magnet)
-                            .ignoresSafeArea()
+                    if let player = avPlayer {
+                        renderPlayerContainer(player: player)
+                    } else if let magnet = activeITorrentMagnetURL {
+                        ITorrentStreamView(magnetURL: magnet, onStreamFound: { streamURL in
+                            let cleanTitle: String
+                            if isTV {
+                                if let index = title.range(of: " S")?.lowerBound {
+                                    cleanTitle = String(title[..<index])
+                                } else {
+                                    cleanTitle = title
+                                }
+                            } else {
+                                cleanTitle = title
+                            }
+                            let year = releaseYear ?? Calendar.current.component(.year, from: Date())
+                            self.startPlayingDirectURL(targetURL: streamURL, cleanTitle: cleanTitle, year: year)
+                        })
+                        .ignoresSafeArea()
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "bolt.horizontal.circle.fill")
