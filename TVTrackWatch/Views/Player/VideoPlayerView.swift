@@ -668,9 +668,9 @@ public struct VideoPlayerView: View {
                         self.itorrentStatusMessage = status
                     }
                 }
-            ) {
+            ), let playbackURL = URL(string: streamURL) {
                 await MainActor.run {
-                    self.startPlayingDirectURL(targetURL: streamURL, cleanTitle: cleanTitle, year: year)
+                    self.startPlayingDirectURL(targetURL: playbackURL, cleanTitle: cleanTitle, year: year)
                     self.isResolvingITorrent = false
                 }
             } else {
